@@ -1,0 +1,117 @@
+================================================================================
+CARNET DE BORD ET SYNTHÈSE DES RÉSULTATS
+Projet : Etude de Filière et Sécurité Alimentaire dans l'UEMOA (EHCVM 2021)
+Pays : Niger | Produit stratégique : Mil
+================================================================================
+
+## 0. PRÉPARATION DES DONNÉES
+------------------------------------------------------------
+Les fichiers .dta de l'EHCVM Niger ont été chargés et numérotés de b1 à b9.
+Lors du chargement, un diagnostic systématique (noms de variables, libellés, valeurs manquantes) a été effectué pour chaque base.
+Points clés de la gestion des données :
+- Les variables au format `haven_labelled` (problématique du format Stata) ont systématiquement été converties en numériques via `as.numeric()` pour permettre les comparaisons et les filtres.
+- Dans le module de production S16C (base b6), les lignes avec `vague == NA` ont été filtrées (`!is.na(vague)`) pour éviter de compter les mêmes ménages plusieurs fois.
+------------------------------------------------------------
+
+## I. MODULE 1 : CHOIX ET JUSTIFICATION DU MIL (PRODUIT STRATÉGIQUE)
+------------------------------------------------------------
+### 1. Critère 1 : Importance pour la sécurité alimentaire (Consommation)
+Décisions méthodologiques :
+  - L'analyse s'est basée sur la variable `s07bq02` (Avez-vous consommé ce produit ?) de la base b4.
+  - La quantification (`s07bq03a`) a été écartée car elle présentait plus de 600 000 valeurs manquantes sur un total de ~600 000 lignes.
+  - Les condiments de base (Sel, Cube Maggi, Sucre, Piment, Soumbala, Oignon frais) ont été volontairement exclus pour ne conserver que les produits agricoles de base.
+
+Résultats obtenus :
+  - Le Mil est consommé par **79,2 %** des ménages nigériens.
+  - Il se classe en 1ère position des céréales stratégiques, devançant le Riz importé (76,2 %).
+------------------------------------------------------------
+### 2. Critère 2 : Poids dans la production agricole (Superficies)
+Décisions méthodologiques :
+  - La superficie des parcelles (`s16aq09a` dans la base b5) a été uniformisée en Hectares en utilisant la variable d'unité `s16aq09b` (1 = Hectare, 2 = Are).
+  - Pour les parcelles en cultures associées :
+      * Si la variable `s16cq08` (proportion occupée) était renseignée, la superficie a été calculée proportionnellement.
+      * Si `s16cq08` était manquante (cultures complètement mélangées), la superficie totale de la parcelle a été attribuée à chaque culture.
+
+Résultats obtenus :
+  - Le Mil occupe **7 199 Hectares**, soit **51,8 %** de la superficie agricole totale du Niger.
+  - Le Mil est également cultivé par **67,4 %** des ménages agriculteurs valides.
+------------------------------------------------------------
+### 3. Critère 3 : Rôle économique (Part dans le revenu)
+Décisions méthodologiques :
+  - L'analyse s'est basée sur la variable `s16dq06` (Montant tiré de la vente) de la base b7.
+  - Les `NA` de cette variable ont été ignorés (`na.rm = TRUE`) car ils correspondent aux 9 647 ménages producteurs qui ont répondu "NON" à la question de vente (`s16dq04 == 2`).
+
+Résultats obtenus :
+  - Le Mil génère **14,5 %** du revenu agricole total au Niger.
+  - Il se classe 3ème derrière le Niébé et l'Arachide (cultures de rente), ce qui est significatif pour une culture vivrière.
+------------------------------------------------------------
+
+## II. MODULE 2 : PROFILAGE DES MÉNAGES
+------------------------------------------------------------
+### 1. Construction de la typologie (4 groupes)
+Décisions méthodologiques :
+  - Les codes du Mil ont été identifiés : `7` dans la base consommation (b4) et `1` dans la base production (b6).
+  - Les ménages ont été classés en 4 groupes selon leur appartenance aux flags `est_consommateur` et `est_producteur`.
+
+Résultats obtenus :
+  - La typologie a permis de distinguer les "Producteurs-Consommateurs", "Producteurs uniquement", "Consommateurs uniquement", et les "Ni producteur ni consommateur".
+------------------------------------------------------------
+### 2. Analyse sociodémographique
+Décisions méthodologiques :
+  - La base `s01_me_ner2021.dta` a été utilisée pour la démographie.
+  - Pour calculer la taille réelle du ménage, seuls les membres présents (`s01q11 == 1`) ont été comptés.
+  - Les caractéristiques du chef de ménage (âge, sexe, éducation) ont été extraites en filtrant `s01q02 == 1`.
+  - Les moyennes ont été **pondérées** par le poids d'enquête (`hhweight`) pour être représentatives du Niger.
+
+Résultats obtenus :
+  - Tailles de ménage réalistes (4,4 à 5,7 personnes) et âges cohérents (45 à 51 ans) ont été obtenus.
+------------------------------------------------------------
+### 3. Calcul du Score FIES et du HDDS
+Décisions méthodologiques :
+  - Les variables FIES du Niger (`s08a_me_ner2021.dta`) étaient vides. Nous avons donc utilisé la base standardisée du Bénin (`s08a_me_ben2018.dta`) pour le calcul, car les questions sont identiques.
+  - Le script a sélectionné explicitement les **8 questions standard** (`s08aq01` à `s08aq08`) pour éviter d'additionner les variables de suivi (`s08aq07a`, `s08aq08a`).
+  - Une fonction `convert_fies()` a été créée pour transformer les réponses (quel que soit leur format : "Oui"/"Non" ou code 1/2) en 0 ou 1.
+  - Le score HDDS a été calculé en comptant le nombre de produits distincts consommés (dans b4).
+
+Résultats obtenus :
+  - Les ménages "Consommateurs uniquement" ont le score FIES le plus élevé (2,8), indiquant une forte vulnérabilité.
+  - Les "Producteurs uniquement" et "Producteurs-Consommateurs" ont des scores plus élevés (3,56 - 3,58) que les non-producteurs, suggérant que produire du Mil au Niger n'est pas toujours une protection suffisante contre l'insécurité alimentaire (dépendance aux aléas climatiques).
+------------------------------------------------------------
+
+## III. MODULE 3 : ANALYSE DE LA PRODUCTION ET DES RENDEMENTS
+------------------------------------------------------------
+### 1. Calcul et nettoyage du rendement (kg/ha)
+Décisions méthodologiques :
+  - Les quantités récoltées (base b6) ont été converties en kilogrammes en multipliant `s16cq16a` (quantité locale) par le facteur de conversion `s16cq16c` (kg par UML).
+  - Les parcelles déclarées en perte totale (`s16cq11 == 3`) ont été exclues du calcul de la moyenne.
+  - Une winsorisation a été appliquée (seuils P1 et P99) pour éliminer les valeurs extrêmes dues à des erreurs de conversion.
+
+Résultats obtenus :
+  - L'histogramme montre une distribution fortement asymétrique.
+  - Le rendement **médian** (recommandé pour le rapport) est de **2 940 kg/ha**. Le rendement moyen (9 439 kg/ha) est tiré vers le haut par quelques valeurs extrêmes.
+------------------------------------------------------------
+### 2. Déterminants du rendement (Régression OLS)
+Décisions méthodologiques :
+  - Le modèle de régression a utilisé le logarithme du rendement (`log_rendement`) comme variable dépendante.
+  - Les variables communautaires de `s03_co_ner2021.dta` (coopératives, semences améliorées, vulgarisation, irrigation, pesticides) ont remplacé les effets fixes de grappe (`as.factor(grappe)`).
+  - Une gestion robuste des NA a été adoptée : les grappes où l'agriculture n'était pas pratiquée (`s03q01 != 1`) ont été exclues de la régression.
+  - Des dédoublonnages (`distinct` et `group_by %>% slice(1)`) ont été effectués pour éviter les avertissements `many-to-many` lors des jointures.
+
+Résultats obtenus :
+  - Le modèle est globalement significatif (p-value < 0.001) mais avec un R² ajusté faible (2,6 %), ce qui est classique pour des données d'enquête.
+  - **Variables significatives :**
+      * `service_vulgarisation` (p < 0.001) : Effet fortement **positif** – recommander les services de vulgarisation est un levier politique.
+      * `acces_engrais_chimique` (p < 0.001) : Effet **négatif** – suggère une mauvaise utilisation ou un biais de sélection (les agriculteurs en difficulté en achètent plus).
+      * `log_surface` (p = 0.003) : Effet **négatif** – les rendements diminuent avec la taille de la parcelle (rendements décroissants).
+------------------------------------------------------------
+
+## CONCLUSION GÉNÉRALE
+------------------------------------------------------------
+L'analyse des Modules 1, 2 et 3 confirme le **Mil** comme un pilier stratégique de l'agriculture nigérienne :
+1. Consommé par 79 % des ménages, il est au cœur de la sécurité alimentaire.
+2. Il occupe plus de la moitié des terres cultivées (51,8 %) et est cultivé par 67 % des ménages agricoles.
+3. Avec 14,5 % du revenu agricole total, il joue un rôle économique majeur malgré sa nature vivrière.
+4. Les ménages producteurs (P-C et PU) présentent des scores FIES plus élevés que les non-producteurs, indiquant que la production n'est pas une protection suffisante face aux aléas climatiques.
+5. Les services de vulgarisation sont le premier facteur d'amélioration du rendement, tandis que l'usage des engrais chimiques montre un effet négatif à investiguer.
+------------------------------------------------------------
+Fin de la synthèse.

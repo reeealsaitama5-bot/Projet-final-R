@@ -1,0 +1,5 @@
+=== STATISTIQUES PREMIÈRE ÉTAPE IV ===
+F-stat = 87.65202 
+R² = 0.2454881 
+Instruments : irrigation et log_temps_marche
+Variable dépendante : producteur (statut producteur de Mil)

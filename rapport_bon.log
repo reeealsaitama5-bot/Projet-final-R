@@ -1,0 +1,16 @@
+This is XeTeX, Version 3.141592653-2.6-0.999998 (TeX Live 2026) (preloaded format=xelatex 2026.7.21)  21 JUL 2026 17:40
+entering extended mode
+ restricted \write18 enabled.
+ %&-line parsing enabled.
+**rapport_bon.tex
+(./rapport_bon.tex
+LaTeX2e <2026-06-01>
+L3 programming layer <2026-05-26>
+(c:/Users/dkhou/AppData/Roaming/TinyTeX/texmf-dist/tex/latex/base/article.cls
+Document Class: article 2025/01/22 v1.4n Standard LaTeX document class
+(c:/Users/dkhou/AppData/Roaming/TinyTeX/texmf-dist/tex/latex/base/size12.clo
+File: size12.clo 2025/01/22 v1.4n Standard LaTeX file (size option)
+
+! Fontconfig error: Cannot load default config file: No such file: (null)
+! C:/Users/dkhou/AppData/Roaming/TinyTeX/texmf-var/fonts/cache does not exist.
+! Kpathsea is not working.

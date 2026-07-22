@@ -1,0 +1,499 @@
+# =============================================================================
+# MODULE 4 : Commercialisation, Prix et Cartographie (Version corrigée)
+# EHCVM Niger 2021 - Projet filière Mil
+# =============================================================================
+
+# ---- 1. Chargement des bibliothèques ----
+library(haven)
+library(here)
+library(dplyr)
+library(ggplot2)
+library(scales)
+library(forcats)
+library(tidyr)
+library(broom)
+
+# ---- 2. Chargement des données (déjà fait dans 00_load_data.R) ----
+if (!exists("b16")) source("00_load_data.R")
+
+cat("\n=== MODULE 4 : Commercialisation et Prix ===\n")
+
+# ---- 3. Nettoyage des données de commercialisation (S16D) ----
+b16_clean <- b16 %>%
+  mutate(
+    qte_vendue_kg = as.numeric(s16dq05c),
+    montant_vente = as.numeric(s16dq06),
+    prix_prod_kg  = if_else(
+      !is.na(qte_vendue_kg) & qte_vendue_kg > 0,
+      montant_vente / qte_vendue_kg,
+      NA_real_
+    ),
+    culture_code = as.numeric(s16dq01),
+    acheteur     = as_factor(s16dq08),
+    stockage     = as_factor(s16dq11),
+    but_stock    = as_factor(s16dq14)
+  ) %>%
+  filter(
+    !is.na(qte_vendue_kg) & qte_vendue_kg > 0,
+    !is.na(montant_vente) & montant_vente > 0,
+    !is.na(prix_prod_kg)  & prix_prod_kg  > 0
+  ) %>%
+  left_join(
+    welfare %>% select(grappe, menage, hhweight, region),
+    by = c("grappe", "menage")
+  ) %>%
+  mutate(region = trimws(as.character(as_factor(region))))
+
+# ── Winsorisation P1/P99 du prix producteur ───────────────────────────────────
+p01 <- quantile(b16_clean$prix_prod_kg, 0.01, na.rm = TRUE)
+p99 <- quantile(b16_clean$prix_prod_kg, 0.99, na.rm = TRUE)
+b16_clean <- b16_clean %>%
+  filter(prix_prod_kg >= p01 & prix_prod_kg <= p99)
+
+cat("Nombre de lignes S16D après nettoyage + winsorisation :", nrow(b16_clean), "\n")
+
+# ---- 4. Quantité produite totale par ménage et culture (S16C) ----
+b6_clean <- b6 %>%
+  filter(!is.na(vague)) %>%
+  mutate(
+    qte_produite_kg = as.numeric(s16cq16a) * as.numeric(s16cq16c),
+    culture_code    = as.numeric(s16cq04)
+  ) %>%
+  filter(!is.na(qte_produite_kg) & qte_produite_kg > 0) %>%
+  group_by(grappe, menage, culture_code) %>%
+  summarise(qte_produite_totale = sum(qte_produite_kg, na.rm = TRUE),
+            .groups = "drop")
+
+# ---- 5. Taux de commercialisation (quantité vendue / quantité produite) ----
+labels_culture <- c(
+  "1"="Mil","2"="Sorgho","3"="Riz Paddy","4"="Maïs","5"="Souchet",
+  "7"="Fonio","8"="Niébé","9"="Voandzou","10"="Arachide",
+  "11"="Gombo","12"="Oseille","13"="Sésame","33"="Oignon",
+  "37"="Haricot vert","55"="Autre"
+)
+
+taux_commer <- b16_clean %>%
+  left_join(b6_clean, by = c("grappe", "menage", "culture_code")) %>%
+  mutate(
+    taux_vente_kg = if_else(
+      !is.na(qte_produite_totale) & qte_produite_totale > 0,
+      pmin(qte_vendue_kg / qte_produite_totale, 1),  # cap à 1
+      NA_real_
+    )
+  ) %>%
+  filter(!is.na(taux_vente_kg)) %>%
+  group_by(culture_code) %>%
+  summarise(
+    nb_pond       = sum(hhweight, na.rm = TRUE),
+    taux_pct      = round(weighted.mean(taux_vente_kg, hhweight, na.rm = TRUE) * 100, 1),
+    # ✅ Correction : prix moyen pondéré correct
+    prix_moyen_kg = round(weighted.mean(prix_prod_kg, hhweight, na.rm = TRUE), 0),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    culture_label = labels_culture[as.character(culture_code)],
+    culture_label = if_else(is.na(culture_label), as.character(culture_code), culture_label)
+  ) %>%
+  filter(!is.na(culture_label)) %>%
+  arrange(desc(taux_pct))
+
+cat("\n--- Taux de commercialisation par culture (kg vendus / kg produits) ---\n")
+print(taux_commer)
+
+# ---- 6. Canaux de vente, stockage et but du stockage (graphiques) ----
+dir.create("figures", showWarnings = FALSE)
+
+## 6a. Canaux de vente
+canaux <- b16_clean %>%
+  filter(!is.na(acheteur)) %>%
+  group_by(acheteur) %>%
+  summarise(effectif_pond = sum(hhweight, na.rm = TRUE), .groups = "drop") %>%
+  mutate(pct = round(effectif_pond / sum(effectif_pond) * 100, 1))
+
+p_canaux <- ggplot(canaux,
+                   aes(x = fct_reorder(acheteur, effectif_pond),
+                       y = effectif_pond, fill = effectif_pond)) +
+  geom_col(show.legend = FALSE) +
+  geom_text(aes(label = paste0(pct, "%")), hjust = -0.1, size = 3.5) +
+  coord_flip() +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.25))) +
+  scale_fill_gradient(low = "#A5D6A7", high = "#1B5E20") +
+  labs(title    = "Canaux de commercialisation (pondéré)",
+       subtitle = "Base S16D | EHCVM Niger 2021",
+       x = NULL, y = "Effectif pondéré") +
+  theme_minimal(base_size = 12) +
+  theme(plot.title = element_text(face = "bold"))
+
+print(p_canaux)
+ggsave("figures/canaux_vente.png", p_canaux, width = 10, height = 6, dpi = 150)
+
+## 6b. Méthodes de stockage
+stock <- b16_clean %>%
+  filter(!is.na(stockage)) %>%
+  group_by(stockage) %>%
+  summarise(effectif_pond = sum(hhweight, na.rm = TRUE), .groups = "drop") %>%
+  mutate(pct = round(effectif_pond / sum(effectif_pond) * 100, 1))
+
+p_stock <- ggplot(stock,
+                  aes(x = fct_reorder(stockage, effectif_pond),
+                      y = effectif_pond, fill = effectif_pond)) +
+  geom_col(show.legend = FALSE) +
+  geom_text(aes(label = paste0(pct, "%")), hjust = -0.1, size = 3.5) +
+  coord_flip() +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.25))) +
+  scale_fill_gradient(low = "#FFCC80", high = "#E65100") +
+  labs(title    = "Méthodes de stockage (pondéré)",
+       subtitle = "Base S16D | EHCVM Niger 2021",
+       x = NULL, y = "Effectif pondéré") +
+  theme_minimal(base_size = 12) +
+  theme(plot.title = element_text(face = "bold"))
+
+print(p_stock)
+ggsave("figures/methodes_stockage.png", p_stock, width = 10, height = 6, dpi = 150)
+
+## 6c. But du stockage (ajout)
+but <- b16_clean %>%
+  filter(!is.na(but_stock)) %>%
+  group_by(but_stock) %>%
+  summarise(effectif_pond = sum(hhweight, na.rm = TRUE), .groups = "drop") %>%
+  mutate(pct = round(effectif_pond / sum(effectif_pond) * 100, 1))
+
+p_but <- ggplot(but,
+                aes(x = fct_reorder(but_stock, effectif_pond),
+                    y = effectif_pond, fill = effectif_pond)) +
+  geom_col(show.legend = FALSE) +
+  geom_text(aes(label = paste0(pct, "%")), hjust = -0.1, size = 3.5) +
+  coord_flip() +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.25))) +
+  scale_fill_gradient(low = "#CE93D8", high = "#6A1B9A") +
+  labs(title    = "But principal du stockage (pondéré)",
+       subtitle = "Base S16D | EHCVM Niger 2021",
+       x = NULL, y = "Effectif pondéré") +
+  theme_minimal(base_size = 12) +
+  theme(plot.title = element_text(face = "bold"))
+
+print(p_but)
+ggsave("figures/but_stockage.png", p_but, width = 10, height = 6, dpi = 150)
+
+## 6d. Taux de commercialisation par culture (ajout)
+p_taux <- taux_commer %>%
+  mutate(culture_label = fct_reorder(culture_label, taux_pct)) %>%
+  ggplot(aes(x = culture_label, y = taux_pct, fill = taux_pct)) +
+  geom_col(show.legend = FALSE) +
+  geom_text(aes(label = paste0(taux_pct, "%")), hjust = -0.1, size = 3.5) +
+  coord_flip() +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.2)),
+                     labels = function(x) paste0(x, "%")) +
+  scale_fill_gradient(low = "#90CAF9", high = "#1565C0") +
+  labs(title    = "Taux de commercialisation par culture (pondéré)",
+       subtitle = "Quantité vendue / Quantité produite | EHCVM Niger 2021",
+       x = NULL, y = "Taux de commercialisation (%)") +
+  theme_minimal(base_size = 12) +
+  theme(plot.title = element_text(face = "bold"))
+
+print(p_taux)
+ggsave("figures/taux_commercialisation.png", p_taux, width = 10, height = 6, dpi = 150)
+
+# ---- 7. Prix à la consommation et autoconsommation (S7B) ----
+# ✅ Correction : jointure hhweight depuis welfare avant le calcul
+cultures_interet <- c(7, 8, 112, 114, 120, 100, 98, 99, 102, 91)
+
+prix_conso <- b4 %>%
+  # ✅ Ajout jointure hhweight
+  left_join(welfare %>% select(grappe, menage, hhweight),
+            by = c("grappe", "menage")) %>%
+  mutate(
+    code_produit  = as.numeric(s07bq01),
+    qte_achetee   = as.numeric(s07bq07a),
+    valeur_achat  = as.numeric(s07bq08),
+    qte_totale    = as.numeric(s07bq03a),
+    qte_autoconso = as.numeric(s07bq04)
+  ) %>%
+  filter(
+    code_produit %in% cultures_interet,
+    !is.na(qte_achetee) & qte_achetee > 0,
+    !is.na(valeur_achat) & valeur_achat > 0,
+    !is.na(hhweight)
+  ) %>%
+  mutate(
+    prix_conso_kg  = valeur_achat / qte_achetee,
+    part_autoconso = if_else(!is.na(qte_totale) & qte_totale > 0,
+                             pmin(qte_autoconso / qte_totale * 100, 100),
+                             0)
+  ) %>%
+  group_by(code_produit) %>%
+  summarise(
+    prix_conso_moy     = round(weighted.mean(prix_conso_kg, hhweight, na.rm = TRUE), 0),
+    part_autoconso_moy = round(weighted.mean(part_autoconso, hhweight, na.rm = TRUE), 1),
+    .groups = "drop"
+  ) %>%
+  mutate(produit_label = case_when(
+    code_produit == 7   ~ "Mil",
+    code_produit == 8   ~ "Sorgho",
+    code_produit == 112 ~ "Niébé",
+    code_produit == 114 ~ "Arachide",
+    code_produit == 120 ~ "Sésame",
+    code_produit == 100 ~ "Oignon",
+    code_produit == 98  ~ "Gombo frais",
+    code_produit == 99  ~ "Gombo sec",
+    code_produit == 102 ~ "Oseille",
+    code_produit == 91  ~ "Haricot vert"
+  ))
+
+cat("\n--- Prix à la consommation et autoconsommation ---\n")
+print(prix_conso)
+
+# ---- 8. Prix marchés communautaires ----
+prix_marche <- prix_communautaire %>%
+  mutate(
+    codpr  = as.numeric(produit__id),
+    region = trimws(as.character(as_factor(region))),
+    prix_kg = case_when(
+      as.numeric(unite) == 2   ~ as.numeric(prix1) / as.numeric(quantite1),
+      as.numeric(unite) == 100 ~ as.numeric(prix1) / (as.numeric(quantite1) / 1000),
+      TRUE ~ NA_real_
+    )
+  ) %>%
+  filter(!is.na(prix_kg) & prix_kg > 0) %>%
+  group_by(codpr, region) %>%
+  summarise(prix_marche_moy = mean(prix_kg, na.rm = TRUE), .groups = "drop")
+
+# ---- 9. Correspondance culture_code <-> codpr ----
+correspondance <- data.frame(
+  culture_code = c(1, 2, 3, 4, 8, 10, 11, 12, 13, 33, 37),
+  codpr        = c(7, 8, 1, 6, 112, 114, 98, 102, 120, 100, 91),
+  label        = c("Mil", "Sorgho", "Riz Paddy", "Maïs", "Niébé", "Arachide",
+                   "Gombo", "Oseille", "Sésame", "Oignon", "Haricot vert")
+)
+
+# ---- 10. Base prix_par_grappe pour le Mil ----
+# Coordonnées GPS depuis s00
+s00_coords <- s00 %>%
+  mutate(grappe = as.numeric(as.character(grappe))) %>%
+  select(grappe, lat , lon ) %>%
+  distinct(grappe, .keep_all = TRUE)
+
+prix_par_grappe <- b16_clean %>%
+  filter(culture_code == 1) %>%  # Mil uniquement
+  group_by(grappe) %>%
+  summarise(
+    prix_prod_moy  = weighted.mean(prix_prod_kg, hhweight, na.rm = TRUE),
+    region         = first(region),
+    n_observations = n(),
+    .groups = "drop"
+  ) %>%
+  left_join(s00_coords, by = "grappe") %>%
+  left_join(
+    prix_marche %>%
+      filter(codpr == 7) %>%
+      select(region, prix_marche_moy),
+    by = "region"
+  ) %>%
+  mutate(
+    marge     = prix_marche_moy - prix_prod_moy,
+    marge_pct = round(marge / prix_prod_moy * 100, 1)
+  ) %>%
+  filter(!is.na(lat) & !is.na(lon) & !is.na(prix_prod_moy))
+
+write.csv(prix_par_grappe, "figures/prix_par_grappe.csv", row.names = FALSE)
+saveRDS(prix_par_grappe, "figures/prix_par_grappe.rds")
+cat("\n✔ Base prix_par_grappe sauvegardée (", nrow(prix_par_grappe), "grappes).\n")
+
+# ---- 11. Carte des marges ----
+
+# Centroïdes des 8 régions du Niger (coordonnées approximatives)
+regions_niger <- data.frame(
+  region = c("Agadez", "Diffa", "Dosso", "Maradi",
+             "Tahoua", "Tillabéri", "Zinder", "Niamey"),
+  lon    = c(  8.00,   12.60,   3.20,   7.10,
+               5.30,    2.10,   8.90,   2.12),
+  lat    = c( 20.50,   13.30,  13.00,  13.50,
+              14.90,   14.20,  14.00,  13.51)
+)
+
+if (nrow(prix_par_grappe) > 0) {
+  if (requireNamespace("maps", quietly = TRUE)) {
+    p_carte <- ggplot() +
+      borders("world", regions = "Niger", fill = "#F5F5DC", color = "grey50",
+              linewidth = 0.5) +
+      geom_point(data = prix_par_grappe,
+                 aes(x = lon, y = lat, color = marge, size = n_observations),
+                 alpha = 0.8) +
+      geom_text(data = regions_niger,
+                aes(x = lon, y = lat, label = region),
+                size = 3, fontface = "bold", color = "grey20",
+                vjust = -0.5) +
+      scale_color_gradient2(low = "#d73027", mid = "#ffffbf", high = "#1a9850",
+                            midpoint = 0, name = "Marge\n(FCFA/kg)") +
+      scale_size_continuous(range = c(1, 5), name = "Nb. obs.") +
+      coord_quickmap(
+        xlim = c(0, 16),
+        ylim = c(11, 24)
+      ) +
+      labs(title    = "Marge commerciale par grappe (Mil)",
+           subtitle = "Marge = Prix marché – Prix producteur | EHCVM Niger 2021",
+           x = "Longitude", y = "Latitude") +
+      theme_minimal(base_size = 12) +
+      theme(plot.title     = element_text(face = "bold"),
+            plot.subtitle  = element_text(color = "grey40"),
+            legend.position = "right",
+            panel.grid.major = element_line(color = "grey90"))
+  } else {
+    p_carte <- ggplot() +
+      geom_point(data = prix_par_grappe,
+                 aes(x = lon, y = lat, color = marge, size = n_observations),
+                 alpha = 0.8) +
+      geom_text(data = regions_niger,
+                aes(x = lon, y = lat, label = region),
+                size = 3, fontface = "bold", color = "grey20",
+                vjust = -0.5) +
+      scale_color_gradient2(low = "#d73027", mid = "#ffffbf", high = "#1a9850",
+                            midpoint = 0, name = "Marge\n(FCFA/kg)") +
+      scale_size_continuous(range = c(1, 5), name = "Nb. obs.") +
+      coord_quickmap() +
+      labs(title    = "Marge commerciale par grappe (Mil)",
+           subtitle = "EHCVM Niger 2021",
+           x = "Longitude", y = "Latitude") +
+      theme_minimal(base_size = 12) +
+      theme(plot.title = element_text(face = "bold"),
+            panel.grid.major = element_line(color = "grey90"))
+  }
+  print(p_carte)
+  ggsave("figures/carte_marges.png", p_carte, width = 10, height = 8, dpi = 300)
+} else {
+  cat("⚠️  Aucune grappe avec coordonnées GPS — carte non générée.\n")
+}
+
+# ---- 12. Marge commerciale par région ----
+marge_region <- prix_par_grappe %>%
+  group_by(region) %>%
+  summarise(
+    prix_prod_moy   = round(mean(prix_prod_moy,   na.rm = TRUE), 0),
+    prix_marche_moy = round(mean(prix_marche_moy, na.rm = TRUE), 0),
+    marge_moy       = round(mean(marge,            na.rm = TRUE), 0),
+    marge_pct       = round(mean(marge_pct,        na.rm = TRUE), 1),
+    .groups = "drop"
+  ) %>%
+  arrange(desc(marge_moy))
+
+cat("\n--- Marge commerciale moyenne par région (FCFA/kg) ---\n")
+print(marge_region)
+write.csv(marge_region, "figures/marge_par_region.csv", row.names = FALSE)
+
+# ---- 13. Régression du prix producteur ----
+dist_marche <- qc_s2 %>%
+  filter(as.numeric(s02q00) %in% c(14, 15)) %>%
+  group_by(grappe) %>%
+  summarise(
+    temps_marche = min(as.numeric(s02q03), na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  mutate(temps_marche = if_else(is.infinite(temps_marche), NA_real_, temps_marche))
+
+coop <- qc_s3 %>%
+  mutate(coop_dummy = if_else(as.numeric(s03q03) == 1, 1L, 0L)) %>%
+  select(grappe, coop_dummy)
+
+reg_data <- b16_clean %>%
+  left_join(dist_marche, by = "grappe") %>%
+  left_join(coop,        by = "grappe") %>%
+  filter(
+    !is.na(temps_marche) & is.finite(temps_marche),
+    !is.na(prix_prod_kg) & prix_prod_kg > 0,
+    !is.na(qte_vendue_kg) & qte_vendue_kg > 0,
+    !is.na(coop_dummy),
+    !is.na(hhweight) & hhweight > 0
+  ) %>%
+  mutate(
+    log_prix  = log(prix_prod_kg),
+    log_temps = log(temps_marche + 1),
+    log_qte   = log(qte_vendue_kg)
+  )
+
+if (nrow(reg_data) > 10) {
+  model_prix <- lm(
+    log_prix ~ log_temps + coop_dummy + as_factor(s16dq08) + log_qte,
+    data    = reg_data,
+    weights = hhweight
+  )
+  cat("\n--- Résultats de la régression du prix producteur ---\n")
+  print(summary(model_prix))
+  saveRDS(model_prix, "figures/model_prix.rds")
+  
+  sink("figures/regression_prix_producteur.txt")
+  cat("MODÈLE : log(prix_prod_kg) ~ log(temps_marche+1) + coop_dummy + canal_vente + log(qte_vendue_kg)\n\n")
+  print(summary(model_prix))
+  sink()
+  
+  # Graphique des coefficients
+  coefs_prix <- tidy(model_prix, conf.int = TRUE) %>%
+    filter(term != "(Intercept)") %>%
+    mutate(
+      term = recode(term,
+                    "log_temps"                                   = "Log(Temps marché+1)",
+                    "coop_dummy"                                  = "Existence coopérative",
+                    "as_factor(s16dq08)Ménage/Particulier"        = "Canal : Particulier",
+                    "as_factor(s16dq08)Coopérative"               = "Canal : Coopérative",
+                    "as_factor(s16dq08)Opérateur privé"           = "Canal : Opérateur privé",
+                    "log_qte"                                     = "Log(Quantité vendue kg)"
+      ),
+      term         = fct_reorder(term, estimate),
+      significatif = if_else(p.value < 0.05, "p<0.05", "p≥0.05")
+    )
+  
+  p_reg <- ggplot(coefs_prix,
+                  aes(x = term, y = estimate, color = significatif)) +
+    geom_point(size = 3.5) +
+    geom_errorbar(aes(ymin = conf.low, ymax = conf.high),
+                  width = 0.25, linewidth = 0.8) +
+    geom_hline(yintercept = 0, linetype = "dashed", color = "grey50") +
+    coord_flip() +
+    scale_color_manual(values = c("p<0.05" = "#1B5E20", "p≥0.05" = "#B71C1C")) +
+    labs(
+      title    = "Déterminants du prix producteur (régression log-log pondérée)",
+      subtitle = "Variable dépendante : log(Prix producteur FCFA/kg) | EHCVM Niger 2021",
+      x = NULL, y = "Coefficient (IC 95%)",
+      color = NULL
+    ) +
+    theme_minimal(base_size = 12) +
+    theme(plot.title    = element_text(face = "bold"),
+          legend.position = "top")
+  
+  print(p_reg)
+  ggsave("figures/regression_prix_producteur.png", p_reg,
+         width = 11, height = 6, dpi = 150)
+} else {
+  cat("⚠️  Pas assez d'observations pour la régression du prix producteur.\n")
+}
+
+# ---- 14. Comparaison prix producteur vs prix marché ----
+if (nrow(prix_par_grappe) > 0) {
+  p_prix_comp <- ggplot(prix_par_grappe,
+                        aes(x = prix_prod_moy, y = prix_marche_moy)) +
+    geom_point(aes(size = n_observations), alpha = 0.6, color = "#1565C0") +
+    geom_abline(slope = 1, intercept = 0,
+                linetype = "dashed", color = "red", linewidth = 0.8) +
+    scale_size_continuous(name = "N obs.") +
+    labs(
+      title    = "Prix producteur vs Prix de marché — Mil",
+      subtitle = "Ligne en pointillés = parité | EHCVM Niger 2021",
+      x = "Prix producteur (FCFA/kg)",
+      y = "Prix marché (FCFA/kg)"
+    ) +
+    theme_minimal(base_size = 12) +
+    theme(plot.title = element_text(face = "bold"))
+  
+  print(p_prix_comp)
+  ggsave("figures/prix_producteur_vs_marche.png", p_prix_comp,
+         width = 8, height = 6, dpi = 300)
+}
+
+cat("\n✔ Module 4 terminé. Tous les résultats sont sauvegardés dans 'figures/'.\n")
+cat("Figures générées :\n")
+cat("  - canaux_vente.png\n")
+cat("  - methodes_stockage.png\n")
+cat("  - but_stockage.png\n")
+cat("  - taux_commercialisation.png\n")
+cat("  - carte_marges.png\n")
+cat("  - regression_prix_producteur.png\n")
+cat("  - prix_producteur_vs_marche.png\n")

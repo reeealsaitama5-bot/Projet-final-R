@@ -1,0 +1,315 @@
+---
+title: "Étude de la Filière du Mil et Sécurité Alimentaire au Niger"
+author:
+  - "Thierno BOCOUM"
+  - "Ndeye Khoudia DIOP"
+date: "Année académique 2025--2026"
+
+output:
+  pdf_document:
+    latex_engine: pdflatex
+    toc: true
+    number_sections: true
+    fig_caption: true
+fontsize: 12pt
+geometry: margin=2.5cm
+
+header-includes:
+
+  - \usepackage{booktabs}
+  - \usepackage{longtable}
+  - \usepackage{array}
+  - \usepackage{float}
+  - \usepackage{xcolor}
+  - \usepackage{colortbl}
+  - \usepackage{multirow}
+  - \usepackage{caption}
+  - \usepackage{titlesec}
+  - \usepackage{fancyhdr}
+  - \usepackage{graphicx}
+  - \usepackage{amsmath}
+  - \usepackage{amssymb}
+
+  - \definecolor{titleblue}{RGB}{31,73,125}
+  - \definecolor{mainblue}{RGB}{31,73,125}
+  - \definecolor{paleblue}{RGB}{219,232,245}
+  - \definecolor{lightblue}{RGB}{234,242,250}
+
+  - \titleformat{\section}{\normalfont\Large\bfseries\color{titleblue}}{\thesection}{1em}{}
+  - \titleformat{\subsection}{\normalfont\large\bfseries\color{titleblue}}{\thesubsection}{1em}{}
+  - \titleformat{\subsubsection}{\normalfont\normalsize\bfseries\color{titleblue}}{\thesubsubsection}{1em}{}
+
+  - \pagestyle{fancy}
+  - \fancyhf{}
+  - \fancyhead[L]{\small Rapport Projet Filière -- Mil, Niger (EHCVM 2021)}
+  - \fancyhead[R]{\small ENSAE Pierre Ndiaye -- ISEP 2}
+  - \fancyfoot[C]{\thepage}
+
+  - \captionsetup[table]{labelfont={bf,color=titleblue}}
+  - \captionsetup[figure]{labelfont={bf,color=titleblue}}
+
+  - \newcommand{\tblhead}[1]{\textcolor{white}{\textbf{#1}}}
+
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = FALSE,
+  warning = FALSE,
+  message = FALSE,
+  fig.align = "center",
+  out.width = "80%"
+)
+
+library(tidyverse)
+library(knitr)
+library(kableExtra)
+library(readr)
+library(haven)
+```
+
+```{=latex}
+\begin{titlepage}
+\centering
+
+\vspace*{0.3cm}
+
+\includegraphics[width=2.2cm]{figures/SEN.jpg}
+
+\vspace{0.2cm}
+
+{\small République du Sénégal\\
+Un peuple -- Un but -- Une foi}
+
+\vspace{0.6cm}
+
+\includegraphics[width=3cm]{figures/ANSD.png}
+
+\vspace{0.2cm}
+
+{\small Agence nationale de la statistique et de la démographie}
+
+\vspace{0.6cm}
+
+\includegraphics[width=3cm]{figures/ENSAE.png}
+
+\vspace{0.2cm}
+
+{\small École nationale de la statistique et de l'analyse économique\\
+Pierre Ndiaye}
+
+\vspace{1cm}
+
+{\LARGE\bfseries\color{titleblue}
+Étude de la Filière du Mil et Sécurité Alimentaire au Niger}
+
+\vspace{0.5cm}
+
+{\large Projet Final -- Traitement Statistique avec R}
+
+\vspace{0.7cm}
+
+\begin{minipage}{0.45\textwidth}
+\centering
+\textbf{Rédigé par}\\
+
+Thierno BOCOUM
+
+Ndeye Khoudia DIOP
+
+Élèves-Ingénieurs Statisticiens Économistes
+
+\end{minipage}
+\hfill
+\begin{minipage}{0.45\textwidth}
+\centering
+\textbf{Sous la supervision de}\\
+
+M. Mouhamadou Hady Diallo
+
+Ingénieur des travaux statistiques
+
+Chercheur associé à l'ENSAE
+
+\end{minipage}
+
+\vfill
+
+{\Large Année académique 2025--2026}
+
+\end{titlepage}
+```
+
+# Décharge
+
+Le présent rapport a été rédigé par Thierno Bocoum et Ndeye Khoudia Diop, élèves-ingénieurs statisticiens économistes à l'École nationale de la statistique et de l'analyse économique Pierre Ndiaye (ENSAE), dans le cadre d'un projet académique de traitement statistique portant sur la filière du Mil au Niger.
+
+Les analyses, résultats et opinions exprimés dans ce document n'engagent que leurs auteurs et ne sauraient être imputés à l'ENSAE Pierre Ndiaye, à l'Agence nationale de la statistique et de la démographie, ni à aucune autre institution citée dans ce travail.
+
+Les données utilisées proviennent de l'Enquête Harmonisée sur les Conditions de Vie des Ménages (EHCVM 2021), dont l'exploitation a été réalisée exclusivement à des fins pédagogiques.
+
+Toute erreur ou omission relève de la seule responsabilité des auteurs.
+
+\newpage
+
+# Remerciements
+
+Au terme de ce travail, nous tenons à exprimer notre profonde gratitude à toutes les personnes ayant contribué à sa réalisation.
+
+Nous remercions tout particulièrement notre encadrant, **M. Mouhamadou Hady Diallo**, pour la qualité de son accompagnement, la pertinence de ses conseils et sa disponibilité.
+
+Nous adressons également nos remerciements à l'ensemble du corps professoral de l'ENSAE Pierre Ndiaye pour la qualité de la formation reçue.
+
+Enfin, nous remercions toutes les personnes ayant contribué, directement ou indirectement, à l'aboutissement de ce projet.
+
+\newpage
+
+# Contexte et méthodologie
+
+## Contexte de l'étude
+
+Le Niger est confronté à d'importants défis de sécurité alimentaire.
+
+Le Mil (*Pennisetum glaucum*) constitue l'une des principales cultures vivrières du pays grâce à son adaptation aux conditions sahéliennes.
+
+Cette étude vise à analyser l'ensemble de la filière afin d'identifier son rôle économique et alimentaire.
+
+## Objectifs de l'étude
+
+### Objectif général
+
+Analyser le rôle stratégique du Mil dans la sécurité alimentaire et l'économie rurale nigérienne.
+
+### Objectifs spécifiques
+
+- Justifier le choix du Mil comme produit stratégique.
+
+- Profiler les ménages producteurs et consommateurs.
+
+- Étudier les rendements agricoles.
+
+- Étudier la commercialisation.
+
+- Évaluer l'impact sur la sécurité alimentaire.
+
+## Sources de données
+
+Cette étude repose principalement sur les bases de données de l'EHCVM 2021 du Niger :
+
+- Module S01
+- Module S07B
+- Module S08A
+- Modules S16A à S16D
+- Module S17
+- Questionnaire communautaire
+
+Des données complémentaires proviennent de FAOSTAT, CHIRPS et GADM.
+
+## Méthodologie
+
+Toutes les statistiques sont pondérées par **hhweight**.
+
+Les variables *haven_labelled* ont été converties en variables numériques.
+
+Les superficies ont été harmonisées en hectares.
+
+Les rendements sont exprimés en kilogrammes par hectare.
+
+Le score FIES est construit à partir de huit questions conformément aux
+recommandations de la FAO.
+# Module 1 — Choix du Mil comme produit stratégique
+
+Le choix du Mil comme produit stratégique repose sur trois critères complémentaires :
+
+- son importance dans la consommation alimentaire ;
+- son poids dans la production agricole ;
+- sa contribution au revenu agricole.
+
+## Fréquence de consommation
+
+L'analyse de la fréquence de consommation des principaux produits alimentaires montre que le Mil est le produit le plus largement consommé au Niger, puisqu'il est présent dans l'alimentation de **79,2 %** des ménages.
+
+Cette statistique est obtenue à partir du module **S07B** de l'EHCVM après exclusion des condiments afin de ne conserver que les principaux aliments.
+
+```{r fig-frequence, fig.cap="Fréquence de consommation des principaux produits"}
+knitr::include_graphics("figures/1_frequence_consommation.png")
+```
+
+Le Mil apparaît ainsi comme la principale céréale consommée dans le pays.
+
+---
+
+## Poids dans la production agricole
+
+Le Mil occupe également une place centrale dans la production agricole nigérienne.
+
+```{r fig-surface, fig.cap="Surface cultivée par culture"}
+knitr::include_graphics("figures/2_surface_agricole.png")
+```
+
+Les indicateurs de surface cultivée et de nombre de producteurs sont résumés dans le tableau suivant.
+
+```{r table-surface}
+
+surface <- tibble(
+
+  Culture=c("Mil","Niébé","Sorgho"),
+
+  `Surface cultivée`=c("51,8 %","22,7 %","16,8 %"),
+
+  `Ménages producteurs`=c("67,4 %","55,5 %","41,4 %")
+
+)
+
+kable(
+surface,
+booktabs=TRUE,
+caption="Part de surface cultivée et de ménages producteurs"
+) |>
+kable_styling(
+latex_options=c("striped","hold_position"),
+full_width=FALSE
+)
+```
+
+Le Mil représente :
+
+- **51,8 %** des surfaces agricoles ;
+
+- **67,4 %** des ménages producteurs.
+
+Les superficies ont été converties en hectares avant calcul des indicateurs.
+
+Lorsque plusieurs cultures étaient présentes sur une même parcelle, les règles décrites dans la méthodologie ont été appliquées.
+
+---
+
+## Rôle économique
+
+Au-delà de son importance alimentaire, le Mil constitue également une culture économiquement importante.
+
+```{r fig-revenu, fig.cap="Répartition du revenu agricole par culture"}
+knitr::include_graphics("figures/4_revenu_agricole.png")
+```
+
+Le Mil représente **14,5 %** du revenu agricole total des ménages.
+
+Il se situe parmi les cultures générant les revenus agricoles les plus importants.
+
+---
+
+## Synthèse du module
+
+Les différents indicateurs convergent vers un même constat.
+
+Le Mil est simultanément :
+
+- le premier produit consommé ;
+- la première culture en superficie ;
+- la première culture en nombre de producteurs ;
+- l'une des principales sources de revenu agricole.
+
+Ainsi, le Mil constitue bien le **produit stratégique** retenu pour l'ensemble des analyses développées dans les modules suivants.
+
+\newpage
+\newpage

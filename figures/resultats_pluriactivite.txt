@@ -1,0 +1,166 @@
+=== MODULE PLURIACTIVITÉ : RÉSULTATS ===
+
+MODÈLE 1 : Effet principal
+
+Call:
+lm(formula = score_fies ~ pluriactif + producteur + log_revenu + 
+    a_vendu + hhsize + hage + hgender + milieu_rural + educ_primaire + 
+    log_pcexp + as.factor(region), data = base_reg, weights = hhweight)
+
+Weighted Residuals:
+    Min      1Q  Median      3Q     Max 
+-271.74  -36.24   -5.11   35.36  352.98 
+
+Coefficients: (1 not defined because of singularities)
+                    Estimate Std. Error t value Pr(>|t|)    
+(Intercept)        21.864832   1.029667  21.235  < 2e-16 ***
+pluriactif         -0.155167   0.077938  -1.991   0.0465 *  
+producteur                NA         NA      NA       NA    
+log_revenu         -0.288292   0.048005  -6.005 2.01e-09 ***
+a_vendu             2.936773   0.513001   5.725 1.08e-08 ***
+hhsize             -0.077529   0.013668  -5.672 1.47e-08 ***
+hage                0.011088   0.002291   4.839 1.33e-06 ***
+hgender             0.145257   0.084376   1.722   0.0852 .  
+milieu_rural        0.529740   0.120385   4.400 1.10e-05 ***
+educ_primaire      -0.177058   0.091575  -1.933   0.0532 .  
+log_pcexp          -1.462836   0.075319 -19.422  < 2e-16 ***
+as.factor(region)2 -0.433815   0.258267  -1.680   0.0931 .  
+as.factor(region)3  0.223715   0.217353   1.029   0.3034    
+as.factor(region)4  0.424137   0.210889   2.011   0.0443 *  
+as.factor(region)5 -0.455788   0.206950  -2.202   0.0277 *  
+as.factor(region)6 -0.236692   0.209725  -1.129   0.2591    
+as.factor(region)7  0.276373   0.206718   1.337   0.1813    
+as.factor(region)8  0.167266   0.239146   0.699   0.4843    
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 65.96 on 6592 degrees of freedom
+Multiple R-squared:  0.1095,	Adjusted R-squared:  0.1073 
+F-statistic: 50.65 on 16 and 6592 DF,  p-value: < 2.2e-16
+
+
+
+MODÈLE 2 : Interaction avec irrigation
+
+Call:
+lm(formula = score_fies ~ pluriactif * irrig + producteur + log_revenu + 
+    a_vendu + hhsize + hage + hgender + milieu_rural + educ_primaire + 
+    log_pcexp + as.factor(region), data = base_reg, weights = hhweight)
+
+Weighted Residuals:
+    Min      1Q  Median      3Q     Max 
+-269.13  -38.85   -5.06   38.88  355.00 
+
+Coefficients: (1 not defined because of singularities)
+                    Estimate Std. Error t value Pr(>|t|)    
+(Intercept)        22.145412   1.182972  18.720  < 2e-16 ***
+pluriactif         -0.248502   0.107285  -2.316   0.0206 *  
+irrig               0.048197   0.118913   0.405   0.6853    
+producteur                NA         NA      NA       NA    
+log_revenu         -0.295278   0.050737  -5.820 6.23e-09 ***
+a_vendu             2.988002   0.541926   5.514 3.68e-08 ***
+hhsize             -0.078640   0.015012  -5.238 1.68e-07 ***
+hage                0.011413   0.002499   4.567 5.06e-06 ***
+hgender             0.103283   0.093101   1.109   0.2673    
+milieu_rural        0.536110   0.133046   4.030 5.67e-05 ***
+educ_primaire      -0.176998   0.102239  -1.731   0.0835 .  
+log_pcexp          -1.488256   0.084862 -17.537  < 2e-16 ***
+as.factor(region)2 -0.146504   0.366009  -0.400   0.6890    
+as.factor(region)3  0.310807   0.317374   0.979   0.3275    
+as.factor(region)4  0.556911   0.313262   1.778   0.0755 .  
+as.factor(region)5 -0.388662   0.307643  -1.263   0.2065    
+as.factor(region)6 -0.164792   0.310202  -0.531   0.5953    
+as.factor(region)7  0.379482   0.310199   1.223   0.2213    
+as.factor(region)8 -0.075663   0.422103  -0.179   0.8577    
+pluriactif:irrig    0.137627   0.152043   0.905   0.3654    
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 69.55 on 5462 degrees of freedom
+  (1128 observations effacées parce que manquantes)
+Multiple R-squared:  0.1005,	Adjusted R-squared:  0.09752 
+F-statistic:  33.9 on 18 and 5462 DF,  p-value: < 2.2e-16
+
+
+
+MODÈLE 3 : Interaction avec coopérative
+
+Call:
+lm(formula = score_fies ~ pluriactif * coop + producteur + log_revenu + 
+    a_vendu + hhsize + hage + hgender + milieu_rural + educ_primaire + 
+    log_pcexp + as.factor(region), data = base_reg, weights = hhweight)
+
+Weighted Residuals:
+    Min      1Q  Median      3Q     Max 
+-273.75  -38.77   -5.22   38.25  351.19 
+
+Coefficients: (1 not defined because of singularities)
+                    Estimate Std. Error t value Pr(>|t|)    
+(Intercept)        21.792064   1.180491  18.460  < 2e-16 ***
+pluriactif         -0.366973   0.093014  -3.945 8.07e-05 ***
+coop               -0.779132   0.129280  -6.027 1.78e-09 ***
+producteur                NA         NA      NA       NA    
+log_revenu         -0.293465   0.050559  -5.804 6.82e-09 ***
+a_vendu             2.952885   0.540077   5.468 4.77e-08 ***
+hhsize             -0.074183   0.014989  -4.949 7.68e-07 ***
+hage                0.011689   0.002493   4.688 2.82e-06 ***
+hgender             0.088626   0.092807   0.955   0.3396    
+milieu_rural        0.347049   0.135762   2.556   0.0106 *  
+educ_primaire      -0.137447   0.102209  -1.345   0.1788    
+log_pcexp          -1.420588   0.084655 -16.781  < 2e-16 ***
+as.factor(region)2 -0.246604   0.360607  -0.684   0.4941    
+as.factor(region)3  0.145370   0.311197   0.467   0.6404    
+as.factor(region)4  0.432204   0.306458   1.410   0.1585    
+as.factor(region)5 -0.487011   0.302219  -1.611   0.1071    
+as.factor(region)6 -0.277211   0.304547  -0.910   0.3627    
+as.factor(region)7  0.282876   0.302421   0.935   0.3496    
+as.factor(region)8 -0.225267   0.420532  -0.536   0.5922    
+pluriactif:coop     0.718581   0.164720   4.362 1.31e-05 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 69.35 on 5462 degrees of freedom
+  (1128 observations effacées parce que manquantes)
+Multiple R-squared:  0.1058,	Adjusted R-squared:  0.1029 
+F-statistic: 35.91 on 18 and 5462 DF,  p-value: < 2.2e-16
+
+
+
+MODÈLE 4 : Robustesse
+
+Call:
+lm(formula = score_fies ~ pluriactif + a_elevage + log_revenu + 
+    a_vendu + hhsize + hage + hgender + milieu_rural + educ_primaire + 
+    log_pcexp + as.factor(region), data = base_reg, weights = hhweight)
+
+Weighted Residuals:
+    Min      1Q  Median      3Q     Max 
+-271.74  -36.24   -5.11   35.36  352.98 
+
+Coefficients: (1 not defined because of singularities)
+                    Estimate Std. Error t value Pr(>|t|)    
+(Intercept)        21.864832   1.029667  21.235  < 2e-16 ***
+pluriactif         -0.155167   0.077938  -1.991   0.0465 *  
+a_elevage                 NA         NA      NA       NA    
+log_revenu         -0.288292   0.048005  -6.005 2.01e-09 ***
+a_vendu             2.936773   0.513001   5.725 1.08e-08 ***
+hhsize             -0.077529   0.013668  -5.672 1.47e-08 ***
+hage                0.011088   0.002291   4.839 1.33e-06 ***
+hgender             0.145257   0.084376   1.722   0.0852 .  
+milieu_rural        0.529740   0.120385   4.400 1.10e-05 ***
+educ_primaire      -0.177058   0.091575  -1.933   0.0532 .  
+log_pcexp          -1.462836   0.075319 -19.422  < 2e-16 ***
+as.factor(region)2 -0.433815   0.258267  -1.680   0.0931 .  
+as.factor(region)3  0.223715   0.217353   1.029   0.3034    
+as.factor(region)4  0.424137   0.210889   2.011   0.0443 *  
+as.factor(region)5 -0.455788   0.206950  -2.202   0.0277 *  
+as.factor(region)6 -0.236692   0.209725  -1.129   0.2591    
+as.factor(region)7  0.276373   0.206718   1.337   0.1813    
+as.factor(region)8  0.167266   0.239146   0.699   0.4843    
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 65.96 on 6592 degrees of freedom
+Multiple R-squared:  0.1095,	Adjusted R-squared:  0.1073 
+F-statistic: 50.65 on 16 and 6592 DF,  p-value: < 2.2e-16
+

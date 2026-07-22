@@ -1,0 +1,35 @@
+MODÈLE DE RÉGRESSION - DÉTERMINANTS DU RENDEMENT DU MIL
+========================================================
+
+Call:
+lm(formula = log_rendement ~ log_intrants + semence_amelioree + 
+    log_surface + edu_chef + presence_coop + acces_sem_ameliorees + 
+    acces_engrais_chimique + acces_pesticide + service_vulgarisation + 
+    pratique_irrigation, data = data_reg)
+
+Residuals:
+    Min      1Q  Median      3Q     Max 
+-5.1324 -1.1261  0.1294  1.2503  4.3872 
+
+Coefficients:
+                        Estimate Std. Error t value Pr(>|t|)    
+(Intercept)             7.327546   0.267246  27.419  < 2e-16 ***
+log_intrants           -0.003217   0.009487  -0.339 0.734599    
+semence_amelioree       0.213208   0.294910   0.723 0.469797    
+log_surface            -0.172632   0.058875  -2.932 0.003408 ** 
+edu_chef               -0.073770   0.087205  -0.846 0.397704    
+presence_coop           0.148882   0.100781   1.477 0.139776    
+acces_sem_ameliorees    0.064978   0.102686   0.633 0.526954    
+acces_engrais_chimique -0.599908   0.120791  -4.967 7.46e-07 ***
+acces_pesticide         0.181183   0.110418   1.641 0.100995    
+service_vulgarisation   0.405196   0.106113   3.819 0.000139 ***
+pratique_irrigation     0.141017   0.088828   1.588 0.112570    
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 1.818 on 1801 degrees of freedom
+  (2458 observations effacées parce que manquantes)
+Multiple R-squared:  0.03187,	Adjusted R-squared:  0.02649 
+F-statistic: 5.928 on 10 and 1801 DF,  p-value: 7.089e-09
+
+========================================================

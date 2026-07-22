@@ -1,0 +1,76 @@
+# =============================================================================
+# MODULE 2 : Profilage des ménages (Version corrigée avec acheteur net)
+# =============================================================================
+source("00_load_data.R")
+list.files("figures")
+
+CODE_MIL_CONSO <- 7
+CODE_MIL_PROD  <- 1
+
+# 1. Consommateurs
+conso <- b4 %>%
+  filter(as.numeric(s07bq01) == CODE_MIL_CONSO & as.numeric(s07bq02) == 1) %>%
+  distinct(grappe, menage) %>% mutate(est_consommateur = 1)
+
+# 2. Producteurs
+prod <- b6 %>%
+  filter(as.numeric(s16cq04) == CODE_MIL_PROD & !is.na(vague)) %>%
+  distinct(grappe, menage) %>% mutate(est_producteur = 1)
+
+# 3. Quantités achetées vs autoproduites (pour acheteur net)
+# On agrège les quantités totales consommées (S7B) et autoproduites
+qte_conso <- b4 %>%
+  filter(as.numeric(s07bq01) == CODE_MIL_CONSO) %>%
+  group_by(grappe, menage) %>%
+  summarise(qte_totale_consommee = sum(as.numeric(s07bq03a), na.rm = TRUE),
+            qte_autoproduite     = sum(as.numeric(s07bq04), na.rm = TRUE), .groups = "drop")
+
+# Base universelle
+base_menages <- b4 %>%
+  distinct(grappe, menage) %>%
+  left_join(conso, by = c("grappe", "menage")) %>%
+  left_join(prod, by = c("grappe", "menage")) %>%
+  left_join(qte_conso, by = c("grappe", "menage")) %>%
+  replace_na(list(est_consommateur = 0, est_producteur = 0, qte_totale_consommee = 0, qte_autoproduite = 0)) %>%
+  mutate(
+    # Typologie de base
+    groupe_typologie = case_when(
+      est_producteur == 1 & est_consommateur == 1 ~ "Producteur-Consommateur",
+      est_producteur == 1 & est_consommateur == 0 ~ "Producteur uniquement",
+      est_producteur == 0 & est_consommateur == 1 ~ "Consommateur uniquement",
+      TRUE ~ "Ni producteur ni consommateur"
+    ),
+    # NOUVEAU : Acheteur net (il consomme plus qu'il ne produit)
+    acheteur_net = if_else(est_producteur == 1 & est_consommateur == 1 & 
+                             qte_totale_consommee > qte_autoproduite, 1, 0)
+  )
+
+# Jointure des poids et indicateurs socio-dem (simplifié ici)
+indicateurs <- s01 %>%
+  filter(as.numeric(s01q11) == 1) %>%
+  group_by(grappe, menage) %>%
+  summarise(taille = n(), 
+            age_chef = mean(as.numeric(s01q04a)[as.numeric(s01q02) == 1], na.rm=TRUE),
+            .groups="drop")
+
+base_finale <- base_menages %>%
+  left_join(indicateurs, by = c("grappe", "menage")) %>%
+  left_join(welfare %>% select(grappe, menage, hhweight, region, milieu), by = c("grappe", "menage"))
+
+# Statistiques pondérées
+stats <- base_finale %>%
+  group_by(groupe_typologie) %>%
+  summarise(
+    N_pond = sum(hhweight, na.rm=TRUE),
+    Taille_moy = weighted.mean(taille, hhweight, na.rm=TRUE),
+    Pct_acheteur_net = weighted.mean(acheteur_net, hhweight, na.rm=TRUE) * 100,
+    .groups = "drop"
+  )
+
+print(stats)
+
+
+
+getwd()
+list.files()
+list.files("figures")

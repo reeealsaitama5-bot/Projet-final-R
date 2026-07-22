@@ -1,0 +1,35 @@
+MODÈLE : log(prix_prod_kg) ~ log(temps_marche+1) + coop_dummy + canal_vente + log(qte_vendue_kg)
+
+
+Call:
+lm(formula = log_prix ~ log_temps + coop_dummy + as_factor(s16dq08) + 
+    log_qte, data = reg_data, weights = hhweight)
+
+Weighted Residuals:
+    Min      1Q  Median      3Q     Max 
+-44.674  -6.522   1.214   7.850  57.249 
+
+Coefficients:
+                                      Estimate Std. Error t value Pr(>|t|)
+(Intercept)                           6.005094   0.055757 107.701  < 2e-16
+log_temps                             0.037319   0.009337   3.997 6.63e-05
+coop_dummy                           -0.067001   0.020059  -3.340 0.000851
+as_factor(s16dq08)Ménage/Particulier -0.186706   0.019207  -9.721  < 2e-16
+as_factor(s16dq08)Coopérative        -0.215476   0.210572  -1.023 0.306282
+as_factor(s16dq08)Opérateur privé    -0.124515   0.151917  -0.820 0.412517
+log_qte                              -0.091880   0.007968 -11.531  < 2e-16
+                                        
+(Intercept)                          ***
+log_temps                            ***
+coop_dummy                           ***
+as_factor(s16dq08)Ménage/Particulier ***
+as_factor(s16dq08)Coopérative           
+as_factor(s16dq08)Opérateur privé       
+log_qte                              ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 12.58 on 2230 degrees of freedom
+Multiple R-squared:  0.09594,	Adjusted R-squared:  0.0935 
+F-statistic: 39.44 on 6 and 2230 DF,  p-value: < 2.2e-16
+

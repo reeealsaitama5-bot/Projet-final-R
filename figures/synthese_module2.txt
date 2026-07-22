@@ -1,0 +1,58 @@
+
+========================================================
+SYNTHÈSE DU MODULE 2 - PROFILAGE DES MÉNAGES
+========================================================
+
+TAILLE MOYENNE DES MÉNAGES PAR GROUPE :
+# A tibble: 4 × 2
+  groupe_typologie              taille_menage_moy
+  <fct>                                     <dbl>
+1 Producteur-Consommateur                    5.48
+2 Consommateur uniquement                    4.52
+3 Ni producteur ni consommateur              4.42
+4 Producteur uniquement                      5.65
+
+
+ÂGE MOYEN DES CHEFS DE MÉNAGE PAR GROUPE :
+# A tibble: 4 × 2
+  groupe_typologie              age_chef_moy
+  <fct>                                <dbl>
+1 Producteur-Consommateur               45.1
+2 Consommateur uniquement               48.6
+3 Ni producteur ni consommateur         51.5
+4 Producteur uniquement                 46.5
+
+
+SCORE FIES MOYEN ET PRÉVALENCES PAR GROUPE :
+# A tibble: 4 × 4
+  groupe_typologie              fies_score_moy fies_moderee_prop fies_severe_prop
+  <fct>                                  <dbl>             <dbl>            <dbl>
+1 Producteur-Consommateur                 3.56             0.642            0.277
+2 Consommateur uniquement                 2.80             0.510            0.199
+3 Ni producteur ni consommateur           2.16             0.392            0.159
+4 Producteur uniquement                   3.58             0.627            0.269
+
+
+CONSOMMATION PAR TÊTE ET DÉPENSES ALIMENTAIRES PAR GROUPE :
+# A tibble: 4 × 3
+  groupe_typologie              conso_par_tete_moy depense_alim_moy
+  <fct>                                      <dbl>            <dbl>
+1 Producteur-Consommateur                    7236.           11428.
+2 Consommateur uniquement                   11615.           20442.
+3 Ni producteur ni consommateur             15306.           18047.
+4 Producteur uniquement                      7468.            9919.
+
+
+ACCÈS AUX FACTEURS (SUPERFICIE ET INTRANTS) PAR GROUPE :
+# A tibble: 4 × 3
+  groupe_typologie              surface_moy_ha valeur_intrants_moy
+  <fct>                                  <dbl>               <dbl>
+1 Producteur-Consommateur                 3.87               7516.
+2 Consommateur uniquement                 2.39               1562.
+3 Ni producteur ni consommateur           3.67                847.
+4 Producteur uniquement                   3.00              11983.
+
+
+========================================================
+FIN DE LA SYNTHÈSE
+========================================================

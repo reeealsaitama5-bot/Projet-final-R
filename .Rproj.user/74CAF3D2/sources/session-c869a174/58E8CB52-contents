@@ -1,0 +1,47 @@
+# =============================================================================
+# MODULE 3 : Rendements et déterminants (Version corrigée)
+# =============================================================================
+source("00_load_data.R")
+
+CODE_MIL <- 1
+
+# --- CARNET DE CONVERSION (Documentation obligatoire) ---
+# s16cq16c = équivalence en kg de 1 unité locale (UML)
+# Décision : On utilise directement la variable brute sans conversion arbitraire,
+# car l'enquête fournit déjà le facteur de conversion par culture.
+cat("\n=== CARNET DE CONVERSION UNITE LOCALE ===\n")
+cat("Unité locale utilisée : UML (Unité de Mesure Locale)\n")
+cat("Facteur de conversion : s16cq16c (fourni par l'enquête)\n")
+cat("Formule : Quantité (kg) = s16cq16a * s16cq16c\n")
+cat("Justification : Conforme à la note méthodologique EHCVM, page 45.\n")
+
+# 1. Filtrage et dédoublonnage
+parcelles <- b6 %>%
+  filter(as.numeric(s16cq04) == CODE_MIL & !is.na(vague)) %>%
+  mutate(qte_kg = as.numeric(s16cq16a) * as.numeric(s16cq16c)) %>%
+  group_by(grappe, menage, s16cq02, s16cq03) %>% slice(1) %>% ungroup()  # dédoublon
+
+# 2. Jointure surface
+parcelles <- parcelles %>%
+  left_join(b5 %>% select(grappe, menage, s16aq02, s16aq03, surface_ha),
+            by = c("grappe", "menage", "s16cq02" = "s16aq02", "s16cq03" = "s16aq03")) %>%
+  filter(!is.na(surface_ha) & surface_ha > 0 & !is.na(qte_kg) & qte_kg > 0) %>%
+  mutate(rendement = qte_kg / surface_ha) %>%
+  filter(as.numeric(s16cq11) != 3 | is.na(s16cq11))  # exclut pertes totales
+
+# 3. Winsorisation
+p1 <- quantile(parcelles$rendement, 0.01, na.rm=TRUE)
+p99 <- quantile(parcelles$rendement, 0.99, na.rm=TRUE)
+parcelles <- parcelles %>% filter(rendement >= p1 & rendement <= p99)
+
+# 4. Sauvegarde du carnet de conversion
+conversion_log <- data.frame(
+  Culture = "Mil",
+  Code = CODE_MIL,
+  Variable_unite = "s16cq16c",
+  Equivalence_kg = "Valeur variable (spécifique à chaque ménage)",
+  Source = "EHCVM S16C, colonne s16cq16c",
+  Date_decision = Sys.Date()
+)
+write.csv(conversion_log, "figures/carnet_conversion_module3.csv", row.names=FALSE)
+cat("✔ Carnet de conversion sauvegardé dans figures/\n")

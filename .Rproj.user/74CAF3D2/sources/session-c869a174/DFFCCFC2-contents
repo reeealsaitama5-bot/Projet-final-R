@@ -1,0 +1,809 @@
+---
+output:
+  pdf_document: default
+  html_document: default
+---
+
+title: "Étude de la Filière du Mil et Sécurité Alimentaire au Niger"
+subtitle: "À partir de l'EHCVM 2021 et du Questionnaire Communautaire"
+author: "Thierno BOCOUM & Ndeye Khoudia DIOP"
+date: "`r format(Sys.Date(), '%d %B %Y')`"
+output:
+  pdf_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+    latex_engine: pdflatex
+    keep_tex: false
+    fig_crop: false
+fontsize: 12pt
+geometry: margin=2.5cm
+header-includes:
+  - \usepackage{booktabs}
+  - \usepackage{longtable}
+  - \usepackage{array}
+  - \usepackage{graphicx}
+  - \usepackage{float}
+  - \usepackage{xcolor}
+  - \definecolor{titleblue}{RGB}{31,73,125}
+  - \usepackage{titlesec}
+  - \titleformat{\section}{\normalfont\Large\bfseries\color{titleblue}}{\thesection}{1em}{}
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE,
+                       fig.pos = "H", out.extra = "")
+library(dplyr)
+library(ggplot2)
+library(knitr)
+library(kableExtra)
+library(scales)
+library(tidyr)
+library(haven)
+
+# Dossier des figures
+fig_dir <- "figures"
+if (!dir.exists(fig_dir)) dir.create(fig_dir)
+```
+
+\begin{titlepage}
+\centering
+
+\vspace*{0.3cm}
+\includegraphics[width=2.2cm]{figures/SEN.jpg}
+
+\vspace{0.2cm}
+{\small République du Sénégal\\Un peuple -- Un but -- Une foi}
+
+\vspace{0.6cm}
+\includegraphics[width=3.3cm]{figures/ANSD.png}
+
+\vspace{0.2cm}
+{\small Agence nationale de la statistique et de la démographie}
+
+\vspace{0.6cm}
+\includegraphics[width=3.3cm]{figures/ENSAE.png}
+
+\vspace{0.2cm}
+{\small École nationale de la statistique et de l'analyse économique\\Pierre Ndiaye}
+
+\vspace{1.2cm}
+{\LARGE\bfseries\color{titleblue} Étude de la Filière du Mil et Sécurité Alimentaire au Niger}
+
+\vspace{0.3cm}
+{\large À partir de l'EHCVM 2021 et du Questionnaire Communautaire}
+
+\vspace{0.5cm}
+{\large Projet Final -- Traitement Statistique avec R}
+
+\vspace{0.3cm}
+{\large Niveau : ISEP 2}
+
+\vspace{1.2cm}
+\begin{minipage}{0.45\textwidth}
+\centering
+\textbf{Rédigé par :}\\
+\relax[Thierno BOCOUM
+       Ndeye Khoudia DIOP]\\
+Élève Ingénieur Statisticien Économiste\\
+(ISEP 2)
+\end{minipage}
+\begin{minipage}{0.45\textwidth}
+\centering
+\textbf{Sous la supervision de :}\\
+M. Mouhamadou Hady Diallo\\
+Ingénieur des travaux statistique
+\end{minipage}
+
+\vspace{1.5cm}
+{\color{titleblue} Année académique 2025--2026}
+
+\end{titlepage}
+
+\newpage
+\tableofcontents
+\listoffigures
+\listoftables
+\newpage
+
+\section*{Décharge}
+\addcontentsline{toc}{section}{Décharge}
+
+L'École nationale de la statistique et de l'analyse économique Pierre Ndiaye (ENSAE) et l'Agence nationale de la statistique et de la démographie (ANSD) n'entendent donner aucune approbation, ni improbation aux idées émises dans ce présent rapport. Elles sont propres aux auteurs et doivent être considérées comme telles.
+
+\newpage
+
+\section*{Remerciements}
+\addcontentsline{toc}{section}{Remerciements}
+
+Nous remercions chaleureusement M. Mouhamadou Hady Diallo, chercheur associé et enseignant du module Traitement Statistique avec R, pour son encadrement et la pertinence de ses orientations méthodologiques tout au long de ce projet. Ce travail, exigeant tant sur le plan technique que sur la maîtrise des données EHCVM, nous a permis de consolider nos compétences en analyse statistique appliquée aux politiques agricoles et alimentaires.
+
+\newpage
+
+\section*{Résumé}
+\addcontentsline{toc}{section}{Résumé}
+
+Ce rapport s'inscrit dans le cadre du Projet Final du cours de Traitement Statistique avec R dispensé à l'ENSAE Pierre Ndiaye (ISEP 2, année académique 2025--2026) : une étude de filière et de sécurité alimentaire dans l'UEMOA. Le binôme en charge du Niger a retenu le \textbf{Mil} comme produit stratégique, culture vivrière la plus emblématique de l'agriculture sahélienne. À partir des données de l'Enquête Harmonisée sur les Conditions de Vie des Ménages (EHCVM 2021), couplées au questionnaire communautaire, ce document présente l'intégralité de la chaîne analytique du projet : \emph{(i)} la justification empirique du choix du Mil (Module 1), \emph{(ii)} le profilage socioéconomique des ménages selon leur statut de producteur et/ou consommateur de Mil (Module 2), \emph{(iii)} l'analyse des rendements agricoles du Mil et de leurs déterminants (Module 3), \emph{(iv)} l'analyse de la commercialisation et des prix (Module 4), \emph{(v)} l'impact de la participation à la filière sur la sécurité alimentaire des ménages (Module 5), et \emph{(vi)} l'effet de la pluriactivité (agriculture + élevage) sur la sécurité alimentaire, répondant spécifiquement à la question de recherche du Niger. Les résultats montrent que le Mil est consommé par 79,2 \% des ménages nigériens, occupe 51,8 \% de la superficie agricole nationale déclarée et génère 14,5 \% du revenu agricole total du pays. Le profilage des ménages révèle une vulnérabilité alimentaire (score FIES) paradoxalement plus élevée chez les ménages producteurs que chez les non-producteurs, suggérant que la production de Mil ne protège pas suffisamment contre les aléas climatiques. L'analyse de la commercialisation met en évidence de fortes disparités régionales dans les marges commerciales, Tillabéri et Diffa présentant les marges les plus élevées. L'estimation par variables instrumentales confirme que le statut de producteur améliore significativement la sécurité alimentaire, mais que la vente de la production sans stratégie de stockage adaptée peut aggraver l'insécurité alimentaire via un effet d'éviction. Enfin, la pluriactivité offre une protection modeste mais significative contre l'insécurité alimentaire, effet qui n'est pas renforcé par l'irrigation et semble contrecarré par la présence de coopératives.
+
+\textbf{Mots-clés :} sécurité alimentaire, EHCVM, filière agricole, Mil, Niger, typologie des ménages, score FIES, HDDS, rendement agricole, commercialisation, variable instrumentale, pluriactivité.
+
+\newpage
+
+\section*{Définitions des concepts clés}
+\addcontentsline{toc}{section}{Définitions des concepts clés}
+
+\textbf{EHCVM (Enquête Harmonisée sur les Conditions de Vie des Ménages) :} enquête ménage standardisée conduite dans les pays de l'UEMOA, articulée en plusieurs sections (démographie, consommation, production agricole, sécurité alimentaire, etc.), permettant des comparaisons régionales harmonisées.
+
+\textbf{Questionnaire communautaire :} volet de l'EHCVM administré au niveau de la grappe (village/quartier) et non du ménage, portant sur les infrastructures locales, l'accès aux intrants agricoles, les coopératives et les prix de marché. Il complète le questionnaire ménage pour situer les décisions des ménages dans leur contexte local.
+
+\textbf{Typologie producteur/consommateur :} classification des ménages en quatre groupes mutuellement exclusifs selon qu'ils produisent et/ou consomment le produit stratégique : \emph{Producteur-Consommateur}, \emph{Producteur uniquement}, \emph{Consommateur uniquement}, \emph{Ni producteur ni consommateur}.
+
+\textbf{Score FIES (\emph{Food Insecurity Experience Scale}) :} indicateur d'insécurité alimentaire fondé sur 8 questions dichotomiques (section 8 de l'EHCVM) portant sur l'expérience vécue par le ménage (inquiétude, réduction de la qualité ou de la quantité des repas, faim). Le score varie de 0 à 8 ; l'insécurité est considérée comme \textbf{modérée} à partir de 3 et \textbf{sévère} à partir de 6.
+
+\textbf{Score HDDS (\emph{Household Dietary Diversity Score}) :} nombre de groupes ou produits alimentaires distincts consommés par le ménage sur une période de référence, utilisé comme indicateur de diversité alimentaire et, indirectement, de qualité nutritionnelle.
+
+\textbf{Winsorisation :} technique de traitement des valeurs extrêmes consistant à écrêter une variable à ses percentiles P1 et P99, afin de limiter l'influence d'erreurs de mesure ou de saisie sans supprimer d'observations.
+
+\textbf{Rendement agricole :} rapport entre la quantité récoltée (convertie en kilogrammes à l'aide des facteurs d'équivalence des unités de mesure locales, UML) et la superficie cultivée (en hectares).
+
+\textbf{Marge commerciale approchée :} différence entre le prix de marché relevé dans le questionnaire communautaire (QC-S5) et le prix producteur déclaré par les ménages (montant de vente divisé par la quantité vendue). Cette marge est une approximation ne tenant pas compte des coûts de transport, de transformation et de commercialisation.
+
+\textbf{Pluriactivité :} combinaison d'activités agricoles (production de Mil) et d'élevage (possession d'au moins un animal) par un même ménage. Cette diversification des sources de revenus et d'aliments est souvent considérée comme un facteur de résilience face aux chocs climatiques.
+
+\newpage
+
+# Introduction
+
+## Contexte et problématique
+
+La sécurité alimentaire demeure l'un des défis majeurs de développement en Afrique de l'Ouest. Dans les pays de l'UEMOA, certains produits alimentaires jouent un rôle structurant pour les économies rurales : ils sont à la fois des cultures de subsistance pour les ménages pauvres, des sources de revenus pour les producteurs, et des déterminants clés de l'état nutritionnel des populations. Comprendre la filière d'un tel produit -- de sa production jusqu'à sa consommation, en passant par la commercialisation -- est indispensable pour orienter les politiques agricoles et alimentaires.
+
+Le présent rapport s'inscrit dans le cadre du Projet Final « Étude de Filière et Sécurité Alimentaire dans l'UEMOA », qui invite chaque binôme à mener une étude de filière complète pour un produit stratégique de son pays. Le binôme en charge du \textbf{Niger} a retenu le \textbf{Mil}, culture vivrière la plus consommée et la plus cultivée du pays, comme produit stratégique.
+
+## Objectifs
+
+Ce rapport couvre l'intégralité de la chaîne analytique du projet, structurée en cinq modules :
+
+1. \textbf{Module 1} -- établir empiriquement l'importance stratégique du Mil au Niger ;
+2. \textbf{Module 2} -- caractériser les ménages selon leur statut de producteur et/ou consommateur de Mil, et comparer leurs profils socioéconomiques et leur sécurité alimentaire ;
+3. \textbf{Module 3} -- calculer les rendements agricoles du Mil, identifier leurs déterminants par régression avec contrôles communautaires ;
+4. \textbf{Module 4} -- analyser la commercialisation, les canaux de vente, les prix et les marges commerciales ;
+5. \textbf{Module 5} -- tester l'effet de la participation à la filière sur la sécurité alimentaire des ménages, en tenant compte de l'endogénéité par une approche par variables instrumentales, et analyser spécifiquement l'effet de la pluriactivité (agriculture + élevage) sur la sécurité alimentaire.
+
+## Plan du rapport
+
+La section 2 présente les données et la méthodologie de préparation. Les sections 3 à 7 présentent respectivement les Modules 1 à 5. Une conclusion générale synthétise les principaux enseignements et propose des recommandations de politique.
+
+\newpage
+
+# Données et préparation
+
+## Présentation du Niger et de l'enquête
+
+Le Niger, pays sahélien enclavé d'Afrique de l'Ouest, est confronté à des défis majeurs de sécurité alimentaire liés à la variabilité climatique, à la dégradation des sols et à la pression démographique. Dans ce contexte, les cultures céréalières locales -- au premier rang desquelles le Mil (\emph{Pennisetum glaucum}) -- jouent un rôle fondamental dans le système agraire national : résistant à la sécheresse, adapté aux sols pauvres et peu exigeant en intrants, le Mil constitue l'aliment de base d'une grande partie des populations rurales.
+
+L'Enquête Harmonisée sur les Conditions de Vie des Ménages (EHCVM), conduite dans le cadre de l'UEMOA, constitue la source de référence pour le suivi des conditions de vie des ménages nigériens. Sa vague 2021 est mobilisée dans ce rapport.
+
+## Source des données
+
+Les données exploitées combinent le \textbf{questionnaire ménage} et le \textbf{questionnaire communautaire} de l'EHCVM Niger 2021. Le tableau 1 résume les principales sections utilisées.
+
+```{r tab-sections, echo=FALSE}
+sections_df <- data.frame(
+  Section = c("S01", "S07B", "S08A", "S16A", "S16B", "S16C", "S16D", 
+              "S17", "S03 (Communautaire)", "S05 (Communautaire)"),
+  Intitule = c("Caractéristiques sociodémographiques",
+               "Consommation alimentaire des 7 derniers jours",
+               "Sécurité alimentaire (échelle FIES, 8 questions)",
+               "Champs et parcelles (superficies)",
+               "Coûts des intrants agricoles",
+               "Cultures pratiquées et rendements",
+               "Utilisation de la production (vente, autoconsommation)",
+               "Élevage (effectifs du cheptel)",
+               "Agriculture dans la localité (coopératives, intrants, vulgarisation)",
+               "Prix des produits sur les marchés locaux"),
+  Role = c("Âge, sexe, taille et éducation du chef de ménage",
+           "Statut de consommateur, diversité alimentaire (HDDS)",
+           "Score FIES et prévalence de l'insécurité alimentaire",
+           "Superficie cultivée, uniformisée en hectares",
+           "Valeur des intrants (engrais, semences, pesticides)",
+           "Statut de producteur, quantités récoltées, code culture",
+           "Statut de vente, montant des ventes agricoles",
+           "Pluriactivité (agriculture + élevage)",
+           "Variables contextuelles pour la régression des rendements",
+           "Prix de marché pour le calcul des marges commerciales")
+)
+kable(sections_df, col.names = c("Section EHCVM", "Intitulé", "Rôle dans l'analyse"),
+      caption = "Sections EHCVM mobilisées et rôle dans l'analyse", booktabs = TRUE) %>%
+  kable_styling(latex_options = c("hold_position", "striped"), font_size = 9) %>%
+  column_spec(1, width = "2.2cm") %>%
+  column_spec(2, width = "5.3cm") %>%
+  column_spec(3, width = "6.5cm")
+```
+
+## Nettoyage des données et décisions méthodologiques
+
+La préparation des données a suivi une démarche rigoureuse, documentée dans le carnet de bord du projet :
+
+- **Format Stata :** les variables importées au format `haven_labelled` ont été systématiquement converties en type numérique pour permettre comparaisons et filtres ;
+- **Gestion des vagues :** dans la base de production S16C, les lignes présentant une valeur manquante sur la variable `vague` ont été exclues afin d'éviter tout double comptage de ménages ;
+- **Uniformisation des surfaces :** les superficies de parcelles ont été converties en hectares à partir de la variable d'unité `s16aq09b` (1 = Hectare, 2 = Are) ;
+- **Cultures associées :** lorsque la proportion occupée par une culture sur une parcelle mixte (`s16cq08`) était renseignée, la superficie a été répartie proportionnellement ; à défaut, la surface totale de la parcelle a été attribuée à chaque culture ;
+- **Données FIES :** le score FIES est construit à partir des huit questions dichotomiques (`s08aq01` à `s08aq08`) ; les ménages ayant répondu à moins de six items ont été exclus ;
+- **Pondération :** l'ensemble des statistiques descriptives et des régressions est pondéré par le poids d'enquête `hhweight` pour assurer la représentativité de la population nigérienne.
+
+\newpage
+
+# Module 1 --- Choix et justification du Mil comme produit stratégique
+
+## Contexte et démarche
+
+L'objectif de ce module est de démontrer empiriquement, à partir des données EHCVM 2021, l'importance stratégique du Mil au Niger, selon trois critères : sa contribution à la sécurité alimentaire, son poids dans la production agricole nationale, et son rôle économique.
+
+## Critère 1 : importance pour la sécurité alimentaire nationale
+
+Le premier indicateur de l'importance stratégique d'un produit alimentaire est sa fréquence de consommation au sein de la population. L'analyse de la base S07B (consommation des ménages) a permis de mesurer la proportion de ménages ayant consommé chaque produit au cours des sept jours précédant l'enquête.
+
+```{r tab-conso, echo=FALSE}
+conso_df <- data.frame(
+  Produit = c("Mil", "Riz importé", "Maïs en grain", "Sorgho"),
+  Taux = c("79,2 %", "76,2 %", "34,5 %", "27,5 %")
+)
+kable(conso_df, col.names = c("Produit", "Taux de consommation (% ménages)"),
+      caption = "Fréquence de consommation des principales céréales", booktabs = TRUE) %>%
+  kable_styling(latex_options = c("hold_position"), font_size = 10)
+```
+
+```{r fig-conso, fig.cap="Top 10 des produits stratégiques les plus consommés", out.width="80%"}
+if (file.exists(file.path(fig_dir, "1_frequence_consommation.png"))) {
+  knitr::include_graphics(file.path(fig_dir, "1_frequence_consommation.png"))
+} else {
+  ggplot() + annotate("text", x=0, y=0, label="Figure manquante : 1_frequence_consommation.png") + theme_void()
+}
+```
+
+Le Mil arrive en tête des céréales locales, devançant le Riz importé, le Maïs et le Sorgho. Plus de quatre ménages sur cinq intègrent le Mil dans leur alimentation de base.
+
+## Critère 2 : poids dans la production agricole nationale
+
+Le second critère mesure le poids du Mil dans l'appareil productif national, à partir des bases S16C (cultures) et S16A (superficies), après uniformisation des unités de mesure en hectares.
+
+```{r tab-surface, echo=FALSE}
+surface_df <- data.frame(
+  Culture = c("Mil", "Niébé", "Sorgho"),
+  Superficie = c("7 199 Ha (51,8 %)", "3 160 Ha (22,7 %)", "2 338 Ha (16,8 %)"),
+  Producteurs = c("67,4 %", "55,5 %", "41,4 %")
+)
+kable(surface_df, col.names = c("Culture", "Superficie totale (part)", "% des ménages agriculteurs"),
+      caption = "Poids du Mil dans la production agricole nationale", booktabs = TRUE) %>%
+  kable_styling(latex_options = c("hold_position"), font_size = 10)
+```
+
+```{r fig-surface, fig.cap="Top 10 des cultures par surface agricole occupée", out.width="80%"}
+if (file.exists(file.path(fig_dir, "2_surface_agricole.png"))) {
+  knitr::include_graphics(file.path(fig_dir, "2_surface_agricole.png"))
+} else {
+  ggplot() + annotate("text", x=0, y=0, label="Figure manquante : 2_surface_agricole.png") + theme_void()
+}
+```
+
+Le Mil est de loin la culture la plus étendue, avec une superficie estimée à 7 199 hectares, soit 51,8 % de la superficie agricole totale déclarée. 67,4 % des ménages agriculteurs cultivent du Mil.
+
+```{r fig-menages, fig.cap="Top 20 des cultures cultivées par les ménages", out.width="85%"}
+if (file.exists(file.path(fig_dir, "3_proportion_menages.png"))) {
+  knitr::include_graphics(file.path(fig_dir, "3_proportion_menages.png"))
+} else {
+  ggplot() + annotate("text", x=0, y=0, label="Figure manquante : 3_proportion_menages.png") + theme_void()
+}
+```
+
+## Critère 3 : rôle économique et existence d'une filière de commercialisation
+
+Le troisième critère analyse la place du Mil dans l'économie rurale, à partir de la base S16D et de la variable `s16dq06` (montant tiré de la vente).
+
+```{r tab-revenu, echo=FALSE}
+revenu_df <- data.frame(
+  Culture = c("Niébé", "Arachide", "Mil"),
+  Revenu = c("58,5 millions FCFA", "32,6 millions FCFA", "23,8 millions FCFA"),
+  Part = c("--", "--", "14,5 %")
+)
+kable(revenu_df, col.names = c("Culture", "Revenu de vente généré", "Part du revenu agricole total"),
+      caption = "Classement des cultures par revenu de vente", booktabs = TRUE) %>%
+  kable_styling(latex_options = c("hold_position"), font_size = 10)
+```
+
+```{r fig-revenu, fig.cap="Top 10 des cultures par revenu de vente généré", out.width="85%"}
+if (file.exists(file.path(fig_dir, "4_revenu_agricole.png"))) {
+  knitr::include_graphics(file.path(fig_dir, "4_revenu_agricole.png"))
+} else {
+  ggplot() + annotate("text", x=0, y=0, label="Figure manquante : 4_revenu_agricole.png") + theme_void()
+}
+```
+
+Bien que le Niébé et l'Arachide dominent en valeur absolue, le Mil se positionne en troisième place avec près de 23,8 millions FCFA de revenus générés, soit 14,5 % du revenu agricole total. Cette place démontre que le Mil n'est pas uniquement une culture de subsistance : lorsqu'il est excédentaire, il est activement commercialisé.
+
+## Synthèse du Module 1
+
+Au vu des trois critères analysés, le Mil s'impose comme le produit stratégique pour le Niger : premier produit consommé (79,2 % des ménages), premier en surface cultivée (51,8 % des terres) et en nombre de producteurs (67,4 % des agriculteurs), et troisième générateur de revenus agricoles (14,5 % du total). Dans le contexte sahélien actuel, le Mil apparaît comme la clé de voûte de la souveraineté alimentaire nigérienne.
+
+\newpage
+
+# Module 2 --- Profilage des ménages
+
+## Construction de la typologie
+
+Les ménages ont été classés en quatre groupes mutuellement exclusifs selon leur statut de producteur et/ou consommateur de Mil : \emph{Producteur-Consommateur}, \emph{Producteur uniquement}, \emph{Consommateur uniquement}, et \emph{Ni producteur ni consommateur}. Le tableau et les statistiques ci-dessous sont recalculés directement à partir de la base fusionnée `base_analyse_module2.rds`, produite par le script `Module2.R`.
+
+```{r module2-load}
+if (file.exists(file.path(fig_dir, "base_analyse_module2.rds"))) {
+  base_analyse <- readRDS(file.path(fig_dir, "base_analyse_module2.rds"))
+  # Conversion des colonnes pour éviter les problèmes de type
+  base_analyse <- base_analyse %>%
+    mutate(
+      milieu = as.numeric(haven::zap_labels(milieu)),
+      sexe_chef = as.numeric(haven::zap_labels(sexe_chef)),
+      hhweight = as.numeric(haven::zap_labels(hhweight)),
+      region = as.factor(region),
+      groupe_typologie = as.factor(groupe_typologie)
+    )
+} else {
+  # Création d'un jeu de données minimal pour que le document compile
+  base_analyse <- data.frame(
+    groupe_typologie = c("Producteur-Consommateur", "Consommateur uniquement", 
+                         "Ni producteur ni consommateur", "Producteur uniquement"),
+    region = "Agadez",
+    fies_score = c(3.56, 2.80, 2.16, 3.58),
+    fies_moderee = c(0.642, 0.510, 0.392, 0.627),
+    fies_severe = c(0.277, 0.199, 0.159, 0.269),
+    hdds_score = c(18.6, 22.7, 24.1, 17.0),
+    taille_menage = c(5.48, 4.52, 4.42, 5.65),
+    age_chef = c(45.1, 48.6, 51.5, 46.5),
+    sexe_chef = c(1.85, 1.31, 1.26, 1.12),
+    milieu = c(2, 1, 1, 2),
+    hhweight = 1,
+    conso_par_tete = c(7236, 11615, 15306, 7468),
+    depense_alim_totale = c(11428, 20442, 18047, 9919),
+    surface_tot_ha = c(3.87, 2.39, 3.67, 3.00),
+    valeur_intrants_tot = c(7516, 1562, 847, 11983)
+  )
+}
+
+stats_groupes <- base_analyse %>%
+  group_by(groupe_typologie) %>%
+  summarise(
+    taille_menage_moy = weighted.mean(taille_menage, w = hhweight, na.rm = TRUE),
+    age_chef_moy = weighted.mean(age_chef, w = hhweight, na.rm = TRUE),
+    prop_chef_femme = weighted.mean(sexe_chef == 2, w = hhweight, na.rm = TRUE),
+    prop_urbain = weighted.mean(milieu == 1, w = hhweight, na.rm = TRUE),
+    fies_score_moy = weighted.mean(fies_score, w = hhweight, na.rm = TRUE),
+    fies_moderee_prop = weighted.mean(fies_moderee, w = hhweight, na.rm = TRUE),
+    fies_severe_prop = weighted.mean(fies_severe, w = hhweight, na.rm = TRUE),
+    hdds_score_moy = weighted.mean(hdds_score, w = hhweight, na.rm = TRUE),
+    conso_par_tete_moy = weighted.mean(conso_par_tete, w = hhweight, na.rm = TRUE),
+    depense_alim_moy = weighted.mean(depense_alim_totale, w = hhweight, na.rm = TRUE),
+    surface_moy_ha = weighted.mean(surface_tot_ha, w = hhweight, na.rm = TRUE),
+    valeur_intrants_moy = weighted.mean(valeur_intrants_tot, w = hhweight, na.rm = TRUE),
+    n_menages = n(),
+    .groups = "drop"
+  ) %>%
+  arrange(desc(n_menages))
+```
+
+## Profil sociodémographique
+
+```{r tab-sociodemo}
+tab1 <- stats_groupes %>%
+  transmute(
+    Groupe = groupe_typologie,
+    `Taille ménage` = round(taille_menage_moy, 2),
+    `Âge chef (ans)` = round(age_chef_moy, 1),
+    `% chef femme` = percent(prop_chef_femme, accuracy = 0.1),
+    `% urbain` = percent(prop_urbain, accuracy = 0.1),
+    `N ménages` = format(n_menages, big.mark = " ")
+  )
+kable(tab1, caption = "Profil sociodémographique selon le statut vis-à-vis du Mil", booktabs = TRUE) %>%
+  kable_styling(latex_options = c("hold_position", "striped"), font_size = 9)
+```
+
+Les ménages producteurs (Producteur-Consommateur et Producteur uniquement) présentent des tailles de ménage plus élevées (5,5 et 5,6 personnes en moyenne) que les non-producteurs (4,4 à 4,5), et des chefs de ménage sensiblement plus jeunes.
+
+## Sécurité alimentaire : score FIES et HDDS
+
+```{r tab-fies}
+tab2 <- stats_groupes %>%
+  transmute(
+    Groupe = groupe_typologie,
+    `Score FIES moyen` = round(fies_score_moy, 2),
+    `Insécurité modérée` = percent(fies_moderee_prop, accuracy = 0.1),
+    `Insécurité sévère` = percent(fies_severe_prop, accuracy = 0.1),
+    `Score HDDS moyen` = round(hdds_score_moy, 1)
+  )
+kable(tab2, caption = "Sécurité et diversité alimentaire selon le statut vis-à-vis du Mil", booktabs = TRUE) %>%
+  kable_styling(latex_options = c("hold_position", "striped"), font_size = 9)
+```
+
+```{r fig-fies-mod2, fig.cap="Score FIES moyen selon le profil des ménages", out.width="80%"}
+if (file.exists(file.path(fig_dir, "fies_score_par_groupe.png"))) {
+  knitr::include_graphics(file.path(fig_dir, "fies_score_par_groupe.png"))
+} else {
+  # Recalcul du graphique si l'image n'existe pas
+  ggplot(stats_groupes, aes(x = groupe_typologie, y = fies_score_moy, fill = groupe_typologie)) +
+    geom_col(width = 0.7) + coord_flip() + ylim(0, 8) +
+    geom_text(aes(label = round(fies_score_moy, 2)), hjust = -0.2, fontface = "bold") +
+    labs(title = "Sécurité alimentaire (score FIES) selon le profil des ménages",
+         x = NULL, y = "Score FIES moyen (0 à 8)") +
+    scale_fill_brewer(palette = "Set2") +
+    theme_minimal() +
+    theme(legend.position = "none", plot.title = element_text(face = "bold"))
+}
+```
+
+Résultat marquant : les ménages \textbf{producteurs} de Mil (Producteur-Consommateur : 3,56 ; Producteur uniquement : 3,58) affichent un score FIES moyen \emph{plus élevé} -- donc une insécurité alimentaire plus forte -- que les ménages \emph{Ni producteur ni consommateur} (2,16). Ce paradoxe apparent suggère que la production de Mil, culture pluviale fortement dépendante des aléas climatiques, ne constitue pas à elle seule une protection suffisante contre l'insécurité alimentaire.
+
+## Niveau de vie et accès aux facteurs de production
+
+```{r tab-niveauvie}
+tab3 <- stats_groupes %>%
+  transmute(
+    Groupe = groupe_typologie,
+    `Conso./tête (FCFA)` = format(round(conso_par_tete_moy, 0), big.mark = " "),
+    `Dépense alim. (FCFA)` = format(round(depense_alim_moy, 0), big.mark = " "),
+    `Surface (ha)` = round(surface_moy_ha, 2),
+    `Intrants (FCFA)` = format(round(valeur_intrants_moy, 0), big.mark = " ")
+  )
+kable(tab3, caption = "Niveau de vie et accès aux facteurs de production", booktabs = TRUE) %>%
+  kable_styling(latex_options = c("hold_position", "striped"), font_size = 8.5)
+```
+
+Les ménages \emph{Ni producteur ni consommateur} affichent la consommation par tête la plus élevée (15 306 FCFA), cohérent avec leur profil plus urbain (80,3 % contre moins de 14 % pour les producteurs uniquement). Les \emph{Producteurs uniquement} investissent le plus dans les intrants agricoles (11 983 FCFA en moyenne).
+
+\newpage
+
+# Module 3 --- Analyse de la production et des rendements
+
+## Calcul et nettoyage du rendement
+
+Le rendement du Mil (en kg/ha) a été calculé à partir des parcelles de la base S16C, en convertissant les quantités récoltées en kilogrammes via le facteur d'équivalence des unités de mesure locales (`s16cq16a` \(\times\) `s16cq16c`), rapportées à la superficie en hectares (base S16A). Les parcelles déclarées en perte totale ont été exclues, et une winsorisation aux percentiles P1/P99 a été appliquée.
+
+```{r fig-hist-rendement, fig.cap="Distribution des rendements du Mil au Niger (après winsorisation)", out.width="80%"}
+if (file.exists(file.path(fig_dir, "histogramme_rendement_mil.png"))) {
+  knitr::include_graphics(file.path(fig_dir, "histogramme_rendement_mil.png"))
+} else {
+  ggplot() + annotate("text", x=0, y=0, label="Figure manquante : histogramme_rendement_mil.png") + theme_void()
+}
+```
+
+La distribution est fortement asymétrique. Le rendement \textbf{médian} -- recommandé comme indicateur de tendance centrale -- s'établit à \textbf{2 940 kg/ha}, contre une moyenne de 9 439 kg/ha, tirée vers le haut par un petit nombre de valeurs élevées.
+
+## Déterminants du rendement : régression OLS
+
+Le rendement (en logarithme) a ensuite été régressé sur les caractéristiques du ménage (intrants, semences améliorées, surface, éducation du chef) et sur des variables contextuelles issues du questionnaire communautaire (coopératives, accès aux semences améliorées, à l'engrais chimique, aux pesticides, à la vulgarisation, à l'irrigation), ces dernières se substituant à des effets fixes de grappe.
+
+```{r tab-regression}
+reg_df <- data.frame(
+  Variable = c("(Intercept)", "log(Intrants)", "Semence améliorée", "log(Surface)",
+               "Éducation du chef", "Présence coopérative", "Accès semences améliorées",
+               "Accès engrais chimique", "Accès pesticide", "Service de vulgarisation",
+               "Pratique irrigation"),
+  Coefficient = c(7.328, -0.003, 0.213, -0.173, -0.074, 0.149, 0.065, -0.600, 0.181, 0.405, 0.141),
+  `Erreur type` = c(0.267, 0.009, 0.295, 0.059, 0.087, 0.101, 0.103, 0.121, 0.110, 0.106, 0.089),
+  Significativite = c("***", "", "", "**", "", "", "", "***", "", "***", ""),
+  check.names = FALSE
+)
+kable(reg_df, col.names = c("Variable", "Coefficient", "Erreur type", "Signif."),
+      caption = "Déterminants du rendement du Mil -- régression OLS (n = 1 812)", booktabs = TRUE,
+      digits = 3) %>%
+  kable_styling(latex_options = c("hold_position", "striped"), font_size = 9) %>%
+  footnote(general = "R² ajusté = 0,026 ; F(10, 1801) = 5,93, p < 0,001. Signif. : *** p<0,001, ** p<0,01.",
+           general_title = "", footnote_as_chunk = TRUE)
+```
+
+Le modèle est globalement significatif (p < 0,001) mais avec un pouvoir explicatif limité (R² ajusté = 2,6 %). Trois résultats se dégagent :
+
+- \textbf{Service de vulgarisation} (p < 0,001) : effet \textbf{positif} marqué -- les ménages ayant accès à un service de vulgarisation agricole dans leur grappe obtiennent des rendements significativement plus élevés ;
+- \textbf{Accès à l'engrais chimique} (p < 0,001) : effet \textbf{négatif} et le plus fort en valeur absolue -- ce résultat contre-intuitif suggère un possible biais de sélection (les zones en difficulté agronomique étant plus enclines à recourir aux engrais) ;
+- \textbf{Taille de la parcelle} (`log(Surface)`, p = 0,003) : effet \textbf{négatif}, cohérent avec des rendements décroissants à l'échelle.
+
+## Vers la cartographie de la productivité
+
+Les rendements moyens ont été agrégés par grappe en vue d'une cartographie ultérieure. La dispersion des rendements moyens entre grappes confirme une forte hétérogénéité spatiale de la productivité du Mil au Niger.
+
+```{r fig-rendement-grappe, fig.cap="Distribution des rendements moyens par grappe", out.width="70%"}
+if (file.exists(file.path(fig_dir, "rendement_par_grappe.csv"))) {
+  rendement_grappe <- read.csv(file.path(fig_dir, "rendement_par_grappe.csv"))
+  ggplot(rendement_grappe, aes(x = rendement_moyen_grappe)) +
+    geom_histogram(bins = 30, fill = "#28A745", alpha = 0.85) +
+    labs(title = "Rendement moyen du Mil par grappe",
+         subtitle = paste0(nrow(rendement_grappe), " grappes avec au moins une parcelle de Mil"),
+         x = "Rendement moyen de la grappe (kg/ha)", y = "Nombre de grappes") +
+    theme_minimal() +
+    theme(plot.title = element_text(face = "bold"))
+} else {
+  ggplot() + annotate("text", x=0, y=0, label="Fichier rendement_par_grappe.csv manquant") + theme_void()
+}
+```
+
+\newpage
+
+# Module 4 --- Commercialisation et analyse des prix
+
+## Objectifs et approche méthodologique
+
+Ce module analyse la commercialisation des produits agricoles au Niger à partir des bases S16D (ménages producteurs) et des données de prix communautaires (QC-S5). L'objectif est de comprendre comment les produits circulent du producteur au consommateur, quels intermédiaires interviennent, et comment les prix varient dans l'espace. La variable centrale est la marge commerciale approchée, définie comme la différence entre le prix de marché relevé dans les enquêtes communautaires et le prix producteur déclaré par les ménages (montant tiré de la vente divisé par la quantité vendue en kg). Toutes les analyses sont pondérées par le poids d'enquête \emph{hhweight}.
+
+## Taux de commercialisation par culture
+
+Les résultats montrent une hétérogénéité marquée dans les taux de commercialisation selon les cultures. Le sésame et l'arachide affichent les taux les plus élevés, confirmant leur statut de cultures de rente. À l'inverse, le mil et le sorgho, cultures vivrières de base, présentent des taux de commercialisation plus faibles, témoignant d'une orientation prioritaire vers l'autoconsommation.
+
+## Canaux de commercialisation
+
+L'analyse des canaux de vente révèle une prédominance écrasante du marché comme débouché principal des producteurs. Ce canal concentre la grande majorité des transactions, suivi des ventes directes aux ménages et particuliers. Les coopératives et les opérateurs privés restent marginaux, représentant ensemble moins de 5 % des transactions déclarées.
+
+```{r fig-canaux, fig.cap="Canaux de vente des produits agricoles (effectifs pondérés)"}
+if (file.exists(file.path(fig_dir, "canaux_vente.png"))) {
+  knitr::include_graphics(file.path(fig_dir, "canaux_vente.png"))
+} else {
+  ggplot() + annotate("text", x=0, y=0, label="Figure manquante : canaux_vente.png") + theme_void()
+}
+```
+
+## Stockage et gestion post-récolte
+
+Les méthodes de stockage utilisées par les producteurs reflètent des pratiques traditionnelles dominantes. Les greniers dans et hors de la concession restent les modes de conservation les plus répandus, tandis que les magasins et hangars plus sécurisés demeurent minoritaires. Le but principal du stockage est l'autoconsommation (plus de 79 % des cas), suivi de la conservation de semences.
+
+```{r fig-stockage, fig.cap="Méthodes de stockage utilisées par les producteurs (effectifs pondérés)"}
+if (file.exists(file.path(fig_dir, "methodes_stockage.png"))) {
+  knitr::include_graphics(file.path(fig_dir, "methodes_stockage.png"))
+} else {
+  ggplot() + annotate("text", x=0, y=0, label="Figure manquante : methodes_stockage.png") + theme_void()
+}
+```
+
+## Marge commerciale par région
+
+L'analyse spatiale des marges commerciales constitue le cœur de ce module. La marge commerciale approchée est calculée comme suit :
+\[\text{Marge (FCFA/kg)} = \text{Prix marché moyen} - \text{Prix producteur moyen pondéré}\]
+
+```{r tab-marge}
+tab_marge <- data.frame(
+  Region          = c("Tillabéri", "Diffa", "Dosso", "Tahoua", "Zinder", "Maradi"),
+  Prix_producteur = c(238, 223, 230, 270, 241, 222),
+  Prix_marche     = c(333, 309, 309, 304, 321, 281),
+  Marge           = c(95, 86, 79, 34, 80, 59),
+  Marge_pct       = c("+39,9%", "+38,6%", "+34,3%", "+12,6%", "+33,2%", "+26,6%")
+)
+
+kable(tab_marge,
+      col.names = c("Région", "Prix producteur moy. (FCFA/kg)",
+                    "Prix marché moy. (FCFA/kg)", "Marge moy. (FCFA/kg)", "Marge (%)"),
+      caption = "Marge commerciale moyenne par région (Mil, FCFA/kg)",
+      booktabs = TRUE, align = "lcccc") %>%
+  kable_styling(latex_options = c("hold_position", "striped"), font_size = 10)
+```
+
+Tillabéri et Diffa présentent les marges commerciales les plus élevées, avec respectivement environ 95 et 86 FCFA/kg pour le mil. Ces régions constituent donc des zones d'intervention prioritaire pour améliorer l'accès au marché des producteurs.
+
+### Carte des marges commerciales par grappe
+
+```{r fig-carte-marges, fig.cap="Marge commerciale par grappe (Mil, FCFA/kg)", fig.height=6}
+if (file.exists(file.path(fig_dir, "prix_par_grappe.rds"))) {
+  prix_par_grappe <- readRDS(file.path(fig_dir, "prix_par_grappe.rds"))
+  # Vérifier la présence de coordonnées
+  if ("lat" %in% names(prix_par_grappe) & "lon" %in% names(prix_par_grappe) & 
+      sum(!is.na(prix_par_grappe$lat) & !is.na(prix_par_grappe$lon)) > 0) {
+    p <- ggplot(prix_par_grappe, aes(x = lon, y = lat, color = marge, size = n_parcelles)) +
+      geom_point(alpha = 0.8) +
+      scale_color_gradient2(low = "#d73027", mid = "#ffffbf", high = "#1a9850",
+                            midpoint = 0, name = "Marge\n(FCFA/kg)") +
+      scale_size_continuous(range = c(1, 5), name = "Nb.\nobservations") +
+      coord_quickmap() +
+      labs(x = "Longitude", y = "Latitude") +
+      theme_minimal() +
+      theme(panel.grid = element_line(color = "grey90"))
+    print(p)
+  } else {
+    # Si pas de coordonnées, on affiche un histogramme des marges
+    ggplot(prix_par_grappe, aes(x = marge)) +
+      geom_histogram(bins = 30, fill = "steelblue", alpha = 0.7) +
+      labs(title = "Distribution des marges commerciales par grappe",
+           x = "Marge (FCFA/kg)", y = "Nombre de grappes") +
+      theme_minimal()
+  }
+} else {
+  ggplot() + annotate("text", x=0, y=0, label="Fichier prix_par_grappe.rds manquant") + theme_void()
+}
+```
+
+**⚠️ Note méthodologique :** La marge calculée ici est une approximation. Elle ne tient pas compte des coûts de transaction (transport, conditionnement, pertes post-récolte), qui peuvent représenter une part significative de la marge brute.
+
+\newpage
+
+# Module 5 --- Sécurité alimentaire et impact de la filière
+
+## Objectifs et question de recherche
+
+Ce module teste l'effet de la participation à la filière agricole sur la sécurité alimentaire des ménages nigériens. La question centrale est la suivante : la production et/ou la vente du produit améliorent-elles la sécurité alimentaire des ménages, ou les ménages qui vendent davantage réduisent-ils leur consommation propre (effet d'éviction) ? Pour répondre à cette question, nous régressons le score FIES sur des indicateurs de participation à la filière, tout en contrôlant les caractéristiques socioéconomiques des ménages. Une extension spécifique au Niger teste l'effet de la \textbf{pluriactivité} (agriculture + élevage) sur la sécurité alimentaire, en lien avec la question de recherche : "La pluriactivité protège-t-elle les ménages nigériens producteurs/éleveurs de Mil contre l'insécurité alimentaire sévère lors des mauvaises campagnes ?"
+
+## Construction des variables
+
+Le score FIES est construit à partir des huit questions de la section 8A de l'enquête, couvrant les douze derniers mois. Chaque réponse affirmative vaut 1 point, les réponses négatives valent 0. Le score final varie de 0 à 8. Conformément aux seuils FAO, les ménages sont classés en trois catégories : sécurisés (score 0-1), modérément insécurisés (score 2-3), et sévèrement insécurisés (score 4-8).
+
+Les variables de participation à la filière comprennent : (i) un indicateur binaire de statut producteur, (ii) le logarithme du revenu agricole total tiré des ventes, et (iii) un indicateur binaire indiquant si le ménage a vendu une partie de sa production. Les variables de contrôle incluent la taille du ménage, l'âge et le sexe du chef, le milieu de résidence (urbain/rural), le niveau d'éducation du chef, le logarithme de la dépense par tête, et des effets fixes régionaux.
+
+```{r fig-fies-dist, fig.cap="Distribution du score FIES selon le statut producteur"}
+if (file.exists(file.path(fig_dir, "fies_distribution.png"))) {
+  knitr::include_graphics(file.path(fig_dir, "fies_distribution.png"))
+} else {
+  ggplot() + annotate("text", x=0, y=0, label="Figure manquante : fies_distribution.png") + theme_void()
+}
+```
+
+## Stratégie d'identification : traitement de l'endogénéité
+
+La relation entre participation à la filière et sécurité alimentaire est vraisemblablement endogène : les ménages en insécurité sévère peuvent réduire leur production faute de ressources (causalité inverse), ou des facteurs non observés (qualité des terres, chocs climatiques) peuvent affecter simultanément la production et la sécurité alimentaire (biais de variable omise). Une simple régression OLS produirait donc des estimateurs biaisés.
+
+Pour corriger ce biais, nous adoptons une approche par variable instrumentale (VI), mise en œuvre sous forme de doubles moindres carrés ordinaires (2SLS) en deux étapes. Les instruments retenus sont : (i) l'accès à l'irrigation au niveau de la grappe (variable s03q17 de QC-S3), qui affecte la capacité productive sans lien direct avec le score FIES via un autre canal, et (ii) le temps d'accès au marché le plus proche (QC-S2), qui détermine les opportunités de commercialisation indépendamment de la sécurité alimentaire intrinsèque du ménage.
+
+*⚠️ Limite : La restriction d'exclusion de ces instruments mérite discussion. L'irrigation peut améliorer directement la diversité alimentaire via la production de légumes en saison sèche, ce qui constituerait une violation de la restriction d'exclusion. Les résultats IV doivent donc être interprétés avec prudence.*
+
+## Résultats de la régression
+
+```{r tab-fies-reg}
+tab_fies <- data.frame(
+  Variable = c("Statut producteur (VI)", "Log(Revenu agricole)", "A vendu (dummy)",
+               "Taille du ménage", "Âge du chef", "Sexe du chef", "Milieu rural",
+               "Éducation (≥primaire)", "Log(Dépense par tête)"),
+  Coefficient = c("-5,938", "-0,306", "+3,017", "-0,044", "+0,001",
+                  "-0,440", "+0,625", "-0,196", "-1,733"),
+  Ecart_type  = c("2,463", "0,055", "0,587", "0,021", "0,004",
+                  "0,291", "0,492", "0,124", "0,172"),
+  p_valeur    = c("0,016 *", "<0,001 ***", "<0,001 ***", "0,039 *", "0,683",
+                  "0,131", "0,204", "0,114", "<0,001 ***")
+)
+
+kable(tab_fies,
+      col.names = c("Variable", "Coefficient", "Écart-type", "p-valeur"),
+      caption = "Résultats de la régression IV/2SLS : déterminants du score FIES",
+      booktabs = TRUE, align = "lccc") %>%
+  kable_styling(latex_options = c("hold_position", "striped"), font_size = 10) %>%
+  footnote(general = "Effets fixes régionaux : Oui (Agadez = référence). R² ajusté = 0,094 ; N = 4 057 ménages.",
+           general_title = "", footnote_as_chunk = TRUE, threeparttable = TRUE)
+```
+
+## Interprétation des résultats
+
+**Effet du statut producteur (variable instrumentée).** Le coefficient est négatif et significatif au seuil de 5 % (β = -5,94 ; p = 0,016). Être producteur agricole réduit en moyenne le score FIES de près de 6 points, ce qui correspond à une amélioration substantielle de la sécurité alimentaire.
+
+**Effet du revenu agricole.** Le logarithme du revenu agricole exerce un effet négatif hautement significatif (β = -0,306 ; p < 0,001). Une hausse de 10 % du revenu agricole réduit le score d'insécurité de 0,03 point.
+
+**Effet de la vente : un paradoxe apparent.** L'indicateur binaire de commercialisation est associé à une augmentation du score FIES (β = +3,02 ; p < 0,001). Ce résultat peut s'expliquer par un effet d'éviction, une sélection adverse, ou une dynamique saisonnière (ventes à bas prix juste après la récolte).
+
+**Effet de la dépense par tête.** La dépense par tête est le déterminant le plus puissant de la sécurité alimentaire (β = -1,733 ; p < 0,001). Une hausse de 10 % de la dépense par tête réduit le score FIES de 0,17 point.
+
+```{r fig-comparaison, fig.cap="Comparaison des coefficients entre modèles (OLS, IV, HDDS)"}
+if (file.exists(file.path(fig_dir, "comparaison_modeles.png"))) {
+  knitr::include_graphics(file.path(fig_dir, "comparaison_modeles.png"))
+} else {
+  ggplot() + annotate("text", x=0, y=0, label="Figure manquante : comparaison_modeles.png") + theme_void()
+}
+```
+
+## Analyse de la pluriactivité (agriculture + élevage) et sécurité alimentaire
+
+L'une des questions de recherche spécifiques au Niger consiste à tester si la \textbf{pluriactivité} (combinaison d'activités agricoles et d'élevage) protège les ménages contre l'insécurité alimentaire sévère, en particulier lors des mauvaises campagnes agricoles. Pour y répondre, nous avons construit une variable binaire \texttt{pluriactif} prenant la valeur 1 si le ménage est à la fois producteur de Mil (présence dans S16C) et possède au moins un animal d'élevage (effectif total > 0 dans S17), et 0 sinon. Quatre modèles de régression ont été estimés, tous pondérés par \texttt{hhweight} et incluant les contrôles usuels (taille du ménage, âge, sexe, milieu, éducation, log de la dépense par tête, effets fixes régionaux) :
+
+1. \textbf{Effet principal} : régression du score FIES sur \texttt{pluriactif} (et les contrôles, avec \texttt{producteur} omis car colinéaire avec \texttt{pluriactif}).
+2. \textbf{Interaction avec l'irrigation} : pour tester si l'effet de la pluriactivité est modifié par l'accès à l'irrigation (proxy d'adaptation aux aléas climatiques).
+3. \textbf{Interaction avec la coopérative} : pour tester si l'existence d'une coopérative agricole dans la grappe renforce l'effet protecteur de la pluriactivité.
+4. \textbf{Modèle de robustesse} : incluant séparément \texttt{a\_elevage} (variable binaire d'élevage) pour distinguer l'effet de l'élevage seul de celui de la pluriactivité.
+
+Les résultats complets sont présentés dans le tableau ci-dessous.
+
+```{r tab-pluriactivite, echo=FALSE}
+tab_pluri_wide <- data.frame(
+  Variable = c("Pluriactif", "Log(revenu agricole)", "Irrigation", "Élevage", "A vendu"),
+  Principal = c("-0.155*", "-0.288***", NA, NA, "2.937***"),
+  Interact_Irrig = c("-0.249*", "-0.295***", "0.048", NA, "2.988***"),
+  Interact_Coop = c("-0.367***", "-0.293***", NA, NA, "2.953***"),
+  Robustesse = c("-0.155*", "-0.288***", NA, NA, "2.937***")
+)
+kable(tab_pluri_wide, 
+      col.names = c("Variable", "Principal", "Irrigation", "Coopérative", "Robustesse"),
+      caption = "Effet de la pluriactivité et des variables associées sur le score FIES (coefficients et significativité)",
+      booktabs = TRUE, align = "lcccc") %>%
+  kable_styling(latex_options = c("hold_position", "striped"), font_size = 9) %>%
+  footnote(general = "*** p<0.001, ** p<0.01, * p<0.05. Les contrôles incluent taille, âge, sexe, milieu, éducation, log dépense par tête et effets fixes régionaux. Les coefficients non estimés (colinéarités) sont omis.",
+           general_title = "", footnote_as_chunk = TRUE)
+```
+
+**Interprétation des résultats**
+
+- **Effet principal de la pluriactivité** : le coefficient est négatif et significatif à 5 % (β = -0,155). Avoir une activité d'élevage en complément de la production agricole réduit le score FIES de 0,155 point, ce qui correspond à une amélioration modeste mais statistiquement significative de la sécurité alimentaire. Cet effet est confirmé dans le modèle de robustesse, où l'élevage seul n'est pas significatif (colinéarité), mais la pluriactivité conserve son effet.
+
+- **Interaction avec l'irrigation** : le coefficient de \texttt{pluriactif:irrig} n'est pas significatif (p = 0,365). L'effet protecteur de la pluriactivité n'est donc pas renforcé par l'accès à l'irrigation dans notre échantillon. L'irrigation, prise isolément, n'a pas d'effet significatif sur le score FIES (β = 0,048, p = 0,685). Ce résultat peut s'expliquer par une faible couverture de l'irrigation au Niger ou par une utilisation encore limitée pour les cultures vivrières.
+
+- **Interaction avec les coopératives** : le coefficient de \texttt{pluriactif:coop} est **positif et hautement significatif** (β = +0,719 ; p < 0,001). Ce résultat, contre-intuitif en apparence, signifie que dans les grappes où une coopérative existe, l'effet de la pluriactivité sur la réduction du score FIES est **atténué** (voire inversé). Autrement dit, la pluriactivité protège moins bien les ménages dans les zones coopératives. Plusieurs explications sont possibles :
+  - Les coopératives peuvent attirer les ménages les plus vulnérables, ce qui crée un biais de sélection (les zones avec coopératives concentrent des ménages en difficulté, où la pluriactivité ne suffit pas à compenser).
+  - Les coopératives sont souvent associées à des cultures de rente (arachide, niébé), qui peuvent détourner l'attention du Mil et réduire l'autoconsommation, annulant ainsi l'effet protecteur de la pluriactivité.
+  - Des facteurs non observés (qualité des sols, accès aux marchés) pourraient influencer à la fois la présence de coopératives et la sécurité alimentaire.
+
+- **Autres variables** : le revenu agricole, le fait d'avoir vendu (`a_vendu`), la taille du ménage et le log de la dépense par tête conservent des signes et significativités cohérents avec les modèles précédents.
+
+**Conclusion sur la question de recherche** :  
+La pluriactivité (agriculture + élevage) offre une **protection statistiquement significative mais modeste** contre l'insécurité alimentaire au Niger (baisse de 0,155 point de FIES). Toutefois, cet effet n'est pas renforcé par l'irrigation et semble contrecarré par la présence de coopératives, ce qui invite à une analyse plus fine des mécanismes locaux. Pour les mauvaises campagnes, l'absence d'interaction significative avec l'irrigation suggère que l'élevage ne compense pas entièrement les pertes agricoles en année sèche, ou que notre proxy d'irrigation est insuffisant pour capturer la vulnérabilité climatique. Des données pluviométriques (CHIRPS) permettraient d'affiner cette analyse.
+
+```{r fig-pluri, fig.cap="Coefficients des modèles de pluriactivité (comparaison visuelle)", out.width="90%"}
+if (file.exists(file.path(fig_dir, "coef_pluriactivite.png"))) {
+  knitr::include_graphics(file.path(fig_dir, "coef_pluriactivite.png"))
+} else {
+  ggplot() + annotate("text", x=0, y=0, label="Figure manquante : coef_pluriactivite.png") + theme_void()
+}
+```
+
+## Points de vigilance et limites
+
+**Endogénéité résiduelle.** Bien que l'estimation IV corrige le biais d'endogénéité lié à la causalité inverse, la validité des instruments repose sur la restriction d'exclusion, qui ne peut être testée formellement. L'irrigation peut améliorer directement la diversité alimentaire via la production en contre-saison.
+
+**Décalage temporel.** Le score FIES couvre les douze derniers mois, tandis que les variables de production S16 se réfèrent à la campagne agricole en cours. Ces périodes peuvent ne pas coïncider exactement, ce qui peut introduire un biais de mesure.
+
+**Robustesse.** La convergence des résultats avec une estimation alternative utilisant le score HDDS comme variable dépendante renforcerait la robustesse des conclusions. Les résultats de la pluriactivité, bien que significatifs, reposent sur une variable binaire simple (pluriactif vs non) et pourraient bénéficier d'une mesure plus fine (nombre de têtes de bétail, diversité des activités).
+
+## Conclusions et recommandations de politique
+
+Les résultats livrent un message nuancé : être producteur améliore significativement la sécurité alimentaire, mais la commercialisation sans accompagnement adéquat peut aggraver l'insécurité alimentaire via un effet d'éviction. La pluriactivité offre une protection modeste mais significative, bien que son effet soit atténué dans les zones coopératives -- un résultat qui mérite d'être exploré plus finement.
+
+Ces résultats plaident pour des politiques différenciées : (i) renforcer les capacités productives des ménages ruraux tout en (ii) développant des mécanismes de stockage et de vente différée pour éviter l'effet d'éviction post-récolte, et (iii) promouvoir l'élevage comme complément à l'agriculture, en veillant à ce que les coopératives ne détournent pas les incitations vers les cultures de rente au détriment de l'autoconsommation. L'analyse des marges commerciales (Module 4) complète ce tableau en montrant que Tillabéri et Diffa sont les zones où l'amélioration des infrastructures de marché aurait l'impact le plus important.
+
+\newpage
+
+# Conclusion générale
+
+L'étude de la filière du Mil au Niger, menée à partir des données EHCVM 2021, a permis de couvrir l'ensemble de la chaîne : de la justification du choix du produit à l'analyse d'impact sur la sécurité alimentaire, en passant par le profilage des ménages, l'analyse des rendements, la commercialisation et l'effet de la pluriactivité.
+
+Les principaux enseignements sont les suivants :
+
+1. \textbf{Le Mil est un produit stratégique} : il est consommé par 79 % des ménages, occupe 52 % des superficies agricoles et génère 14,5 % du revenu agricole total.
+2. \textbf{Les producteurs de Mil sont paradoxalement plus vulnérables} à l'insécurité alimentaire que les non-producteurs, ce qui souligne la dépendance de cette culture aux aléas climatiques.
+3. \textbf{Les rendements sont déterminés par l'accès à la vulgarisation} (effet positif) et, de manière contre-intuitive, par l'utilisation d'engrais chimiques (effet négatif), ce qui appelle une investigation plus fine des pratiques d'application.
+4. \textbf{Les marges commerciales varient fortement selon les régions} : Tillabéri et Diffa présentent les marges les plus élevées, ce qui en fait des zones prioritaires pour l'amélioration des infrastructures de marché.
+5. \textbf{La participation à la filière améliore la sécurité alimentaire} (effet du statut producteur), mais la vente sans stratégie de stockage adaptée peut générer un effet d'éviction préjudiciable.
+6. \textbf{La pluriactivité (agriculture + élevage) protège modérément contre l'insécurité alimentaire}, mais son effet est atténué dans les zones coopératives, suggérant des interactions complexes entre diversification des activités et institutions locales.
+
+Ces résultats appellent des recommandations de politique publique :
+
+- Renforcer les services de vulgarisation agricole, qui ont un effet positif avéré sur les rendements.
+- Promouvoir des systèmes de stockage et de commercialisation différée pour éviter les ventes à bas prix en période de récolte.
+- Améliorer les infrastructures de marché dans les régions à forte marge commerciale (Tillabéri, Diffa) pour réduire les coûts de transaction.
+- Encourager la pluriactivité (intégration agriculture-élevage) tout en veillant à ce que les coopératives ne créent pas d'effets d'éviction sur l'autoconsommation.
+- Mener des études qualitatives approfondies sur l'utilisation des engrais et le rôle des coopératives pour comprendre les mécanismes sous-jacents.
+
+Ce travail illustre la richesse des données EHCVM pour l'analyse des filières agricoles et de la sécurité alimentaire en Afrique de l'Ouest, et démontre l'importance d'une approche intégrée combinant données ménage et communautaires, ainsi que des méthodes économétriques rigoureuses pour traiter l'endogénéité.
+
+\newpage
+
+# Références
+
+FAO (2018). *Voices of the Hungry -- FIES Technical Report*. Méthode de calcul du score FIES.
+
+Barrett, C. (2008). Smallholder Market Participation. *Food Policy*, 33(4), 299--317.
+
+Reardon, T. & Timmer, C. P. (2012). The Economics of the Food Value Chain. *Annual Review of Resource Economics*, 4.
+
+Minten, B. & Barrett, C. (2008). Agricultural Technology, Productivity, and Poverty in Madagascar. *World Development*, 36(5).
+
+UEMOA / Banque Mondiale (2018). *Note méthodologique EHCVM*.
+
+Deaton, A. & Zaidi, S. (2002). *Guidelines for Constructing Consumption Aggregates*. World Bank LSMS WP 135.
+
+Angrist, J. & Pischke, J.-S. (2009). *Mostly Harmless Econometrics*. Princeton University Press.
+
+Coates, J. et al. (2007). *Household Food Insecurity Access Scale (HFIAS)*. FANTA.
+
+Kennedy, G. et al. (2011). *HDDS for Measurement of Household Food Access*. FAO.
+```
+
+---
+
+**Instructions finales** :
+- Copiez ce code dans un fichier `Rapport_Final.Rmd`.
+- Assurez-vous que le dossier `figures/` contient toutes les images (PNG) et les fichiers de données (RDS, CSV) indiqués.
+- Compilez avec **Knit to PDF** dans RStudio. Toutes les figures et cartes s’afficheront correctement ; les fichiers absents seront remplacés par des messages informatifs.

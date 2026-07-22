@@ -1,0 +1,225 @@
+Voici le fichier **Quarto** (`.qmd`) pour une présentation Beamer, adapté à partir de votre rapport.\
+Copiez-collez ce code dans un fichier `presentation.qmd` et compilez-le avec `quarto render presentation.qmd --to beamer` ou via RStudio avec le bouton "Render" (si vous avez configuré Quarto).
+
+``` qmd
+---
+title: "Étude de la Filière du Mil et Sécurité Alimentaire au Niger"
+subtitle: "EHCVM 2021 - Projet Final ISEP 2"
+author: "Thierno BOCOUM & Ndeye Khoudia DIOP"
+date: "`r format(Sys.Date(), '%d %B %Y')`"
+format: 
+  beamer:
+    theme: "AnnArbor"
+    colortheme: "dolphin"
+    fonttheme: "structurebold"
+    keep-tex: false
+    latex-engine: xelatex
+    toc: false
+    slide-level: 2
+editor:
+  markdown:
+    wrap: 72
+---
+
+```f3175f2a-e8a0-4436-be12-b33925b6d220
+31b8e172-b470-440e-83d8-e6b185028602:dAB5AHAAZQA6AFoAZwBBAHoAQQBEAEUAQQBOAHcAQQAxAEEARwBZAEEATQBnAEIAaABBAEMAMABBAFoAUQBBADQAQQBHAEUAQQBNAEEAQQB0AEEARABRAEEATgBBAEEAegBBAEQAWQBBAEwAUQBCAGkAQQBHAFUAQQBNAFEAQQB5AEEAQwAwAEEAWQBnAEEAegBBAEQATQBBAE8AUQBBAHkAQQBEAFUAQQBZAGcAQQAyAEEARwBRAEEATQBnAEEAeQBBAEQAQQBBAAoAcABvAHMAaQB0AGkAbwBuADoATgB3AEEAeQBBAEQAZwBBAAoAcAByAGUAZgBpAHgAOgAKAHMAbwB1AHIAYwBlADoAWQBBAEIAZwBBAEcAQQBBAGUAdwBCAHkAQQBDAEEAQQBjAHcAQgBsAEEASABRAEEAZABRAEIAdwBBAEMAdwBBAEkAQQBCAHAAQQBHADQAQQBZAHcAQgBzAEEASABVAEEAWgBBAEIAbABBAEQAMABBAFIAZwBCAEIAQQBFAHcAQQBVAHcAQgBGAEEASAAwAEEAQwBnAEIAcgBBAEcANABBAGEAUQBCADAAQQBIAEkAQQBPAGcAQQA2AEEARwA4AEEAYwBBAEIAMABBAEgATQBBAFgAdwBCAGoAQQBHAGcAQQBkAFEAQgB1AEEARwBzAEEASgBBAEIAegBBAEcAVQBBAGQAQQBBAG8AQQBHAFUAQQBZAHcAQgBvAEEARwA4AEEASQBBAEEAOQBBAEMAQQBBAFIAZwBCAEIAQQBFAHcAQQBVAHcAQgBGAEEAQwB3AEEASQBBAEIAMwBBAEcARQBBAGMAZwBCAHUAQQBHAGsAQQBiAGcAQgBuAEEAQwBBAEEAUABRAEEAZwBBAEUAWQBBAFEAUQBCAE0AQQBGAE0AQQBSAFEAQQBzAEEAQwBBAEEAYgBRAEIAbABBAEgATQBBAGMAdwBCAGgAQQBHAGMAQQBaAFEAQQBnAEEARAAwAEEASQBBAEIARwBBAEUARQBBAFQAQQBCAFQAQQBFAFUAQQBLAFEAQQBLAEEARwB3AEEAYQBRAEIAaQBBAEgASQBBAFkAUQBCAHkAQQBIAGsAQQBLAEEAQgBuAEEARwBjAEEAYwBBAEIAcwBBAEcAOABBAGQAQQBBAHkAQQBDAGsAQQBDAGcAQgBzAEEARwBrAEEAWQBnAEIAeQBBAEcARQBBAGMAZwBCADUAQQBDAGcAQQBhAHcAQgB1AEEARwBrAEEAZABBAEIAeQBBAEMAawBBAEMAZwBCAHMAQQBHAGsAQQBZAGcAQgB5AEEARwBFAEEAYwBnAEIANQBBAEMAZwBBAGEAdwBCAGgAQQBHAEkAQQBiAEEAQgBsAEEARQBVAEEAZQBBAEIAMABBAEgASQBBAFkAUQBBAHAAQQBBAG8AQQBZAEEAQgBnAEEARwBBAEEACgBzAHUAZgBmAGkAeAA6AA==:31b8e172-b470-440e-83d8-e6b185028602
+```
+
+```{=latex}
+\begin{frame}
+\titlepage
+\end{frame}
+```
+
+```{=latex}
+\begin{frame}{Plan}
+\tableofcontents
+\end{frame}
+```
+
+# Contexte et objectifs
+
+## Contexte
+
+-   La sécurité alimentaire est un défi majeur en Afrique de l'Ouest
+-   Le **Mil** est une culture vivrière emblématique du Niger
+-   Étude de la filière complète : production → commercialisation → consommation
+-   Source : EHCVM 2021 + questionnaire communautaire
+
+## Questions de recherche
+
+-   Importance stratégique du Mil ?
+-   Profil des ménages producteurs/consommateurs ?
+-   Rendements et déterminants ?
+-   Circuits de commercialisation et marges ?
+-   Impact de la filière sur la sécurité alimentaire ?
+-   La pluriactivité (agriculture + élevage) protège-t-elle contre l'insécurité alimentaire ?
+
+# Données et méthodologie
+
+## Sources de données
+
+-   **EHCVM Niger 2021** : ménages et communautaire
+-   Sections mobilisées :
+    -   S01, S07B, S08A (consommation, FIES)
+    -   S16A, S16B, S16C, S16D (production, intrants, rendements, ventes)
+    -   S17 (élevage)
+    -   S03, S05 communautaires (coopératives, prix)
+
+## Méthodologie
+
+-   Nettoyage rigoureux (conversion des unités, gestion des vagues)
+-   Pondération par `hhweight`
+-   Construction du score FIES (0-8) et HDDS
+-   Régression OLS (rendements) et IV/2SLS (impact filière)
+-   Analyse de la pluriactivité
+
+# Module 1 – Choix du Mil
+
+## Critère 1 : Fréquence de consommation
+
+```{r fig-conso, fig.cap="Top 10 produits stratégiques", out.width="70%"}
+include_graphics("figures/1_frequence_consommation.png")
+```
+
+-   Mil : **79,2 %** des ménages le consomment
+-   Devance le riz importé (76,2 %)
+
+## Critère 2 : Poids dans la production
+
+-   **51,8 %** de la superficie agricole totale
+-   **67,4 %** des ménages agriculteurs cultivent du Mil
+
+## Critère 3 : Revenu agricole
+
+-   Mil génère **14,5 %** du revenu agricole total
+-   3ème culture en termes de valeur de vente
+
+**Synthèse :** Mil = produit stratégique pour le Niger
+
+# Module 2 – Profilage des ménages
+
+## Typologie en 4 groupes
+
+-   Producteur-Consommateur (majoritaire)
+-   Producteur uniquement
+-   Consommateur uniquement
+-   Ni producteur ni consommateur
+
+## Résultats clés
+
+-   Producteurs ont des ménages plus grands (5,5 pers.) et plus jeunes
+-   Paradoxe : **les producteurs ont un score FIES plus élevé** (insécurité alimentaire plus forte) que les non-producteurs
+
+```{r fig-fies-mod2, fig.cap="Score FIES moyen selon le profil", out.width="70%"}
+include_graphics("figures/fies_score_par_groupe.png")
+```
+
+# Module 3 – Rendements
+
+## Distribution des rendements
+
+-   Médiane : **2 940 kg/ha**
+-   Moyenne : 9 439 kg/ha (forte asymétrie)
+-   Winsorisation appliquée
+
+```{r fig-hist-rendement, fig.cap="Distribution des rendements", out.width="70%"}
+include_graphics("figures/histogramme_rendement_mil.png")
+```
+
+## Déterminants (régression OLS)
+
+-   **Service de vulgarisation** : effet positif (p\<0.001)
+-   **Accès aux engrais chimiques** : effet négatif (p\<0.001) – résultat contre-intuitif
+-   **Taille de la parcelle** : effet négatif (rendements décroissants)
+
+# Module 4 – Commercialisation
+
+## Canaux de vente
+
+-   Marché : 60,8 % des transactions
+-   Vente directe aux particuliers : 38,6 %
+-   Coopératives et opérateurs privés : \< 5 %
+
+```{r fig-canaux, fig.cap="Canaux de vente", out.width="70%"}
+include_graphics("figures/canaux_vente.png")
+```
+
+## Méthodes de stockage
+
+-   Greniers (traditionnels) dominent
+-   Stockage pour autoconsommation (79 %)
+
+## Marges commerciales par région
+
+-   **Tillabéri et Diffa** : marges les plus élevées (\> 80 FCFA/kg)
+-   Zones prioritaires pour améliorer les infrastructures
+
+# Module 5 – Impact sur la sécurité alimentaire
+
+## Stratégie d'identification
+
+-   Endogénéité potentielle
+-   Estimation **IV/2SLS** avec instruments : irrigation + distance au marché
+
+## Résultats (IV)
+
+-   **Statut producteur** : réduit le score FIES de 5,94 points (p=0,016)
+-   **Revenu agricole** : effet négatif significatif (p\<0,001)
+-   **A vendu** : augmente le score FIES (effet d'éviction)
+-   **Dépense par tête** : principal déterminant (p\<0,001)
+
+```{r fig-comparaison, fig.cap="Comparaison des modèles", out.width="70%"}
+include_graphics("figures/comparaison_modeles.png")
+```
+
+## Analyse de la pluriactivité
+
+-   Variable `pluriactif` = producteur de Mil + élevage
+-   Effet **négatif et significatif** sur FIES (protection modeste)
+-   Interaction avec **coopérative** : effet **positif** (atténuation du bénéfice) – résultat inattendu
+-   Interaction avec irrigation : non significative
+
+```{r fig-pluri, fig.cap="Coefficients pluriactivité", out.width="70%"}
+include_graphics("figures/coef_pluriactivite.png")
+```
+
+# Conclusion et recommandations
+
+## Principaux enseignements
+
+-   Le Mil est stratégique (79 % conso, 52 % surface, 14,5 % revenu)
+-   Producteurs plus vulnérables à l’insécurité alimentaire
+-   Rendements améliorés par la vulgarisation ; engrais chimiques questionnés
+-   Marges élevées dans Tillabéri et Diffa
+-   La pluriactivité protège modérément, mais les coopératives atténuent cet effet
+
+## Recommandations
+
+1.  Renforcer la vulgarisation agricole
+2.  Promouvoir le stockage différé pour éviter l’effet d’éviction
+3.  Améliorer les infrastructures de marché dans les zones à forte marge
+4.  Encourager la pluriactivité tout en surveillant le rôle des coopératives
+5.  Étudier l’usage des engrais et l’impact des coopératives
+
+# Références
+
+-   FAO (2018). FIES Technical Report.
+-   Barrett (2008). Smallholder Market Participation. *Food Policy*.
+-   UEMOA / Banque Mondiale (2018). Note méthodologique EHCVM.
+-   Angrist & Pischke (2009). *Mostly Harmless Econometrics*.
+
+------------------------------------------------------------------------
+
+Merci pour votre attention ! \`\`\`
+
+**Instructions :**
+
+1.  Copiez ce code dans un fichier `presentation.qmd`.
+2.  Assurez-vous que les fichiers images (dans `figures/`) sont présents.
+3.  Ouvrez le fichier dans RStudio ou utilisez la commande :\
+    `quarto render presentation.qmd --to beamer`
+4.  Le PDF de la présentation sera généré.
+
+Si vous préférez une autre couleur ou un autre thème, modifiez les lignes `theme: "AnnArbor"` et `colortheme: "dolphin"` dans l’en-tête YAML.
+
