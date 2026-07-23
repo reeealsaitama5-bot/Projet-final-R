@@ -1,0 +1,604 @@
+---
+title: "Étude de la Filière du Mil et Sécurité Alimentaire au Niger"
+author: "Thierno Bocoum & Ndeye Khoudia Diop"
+institute: "ENSAE Pierre Ndiaye"
+date: "Année académique 2025--2026"
+fontsize: 11pt
+classoption: "aspectratio=169"
+output:
+  beamer_presentation:
+    theme: "Madrid"
+    keep_tex: true
+    slide_level: 2
+header-includes:
+  - \usepackage[table]{xcolor}
+  - \usepackage{colortbl}
+  - \usepackage{booktabs}
+  - \usepackage{multirow}
+  - \usepackage{amsmath}
+  - \usepackage{amssymb}
+  - \usepackage{tikz}
+  - \usetikzlibrary{shapes.geometric, positioning}
+  - \setbeamertemplate{navigation symbols}{}
+  - \definecolor{mainblue}{RGB}{21,101,192}
+  - \definecolor{darkblue}{RGB}{10,52,110}
+  - \definecolor{midblue}{RGB}{144,196,240}
+  - \definecolor{lightblue}{RGB}{223,238,252}
+  - \definecolor{paleblue}{RGB}{241,248,255}
+  - \definecolor{grayish}{RGB}{90,90,90}
+  - \setbeamercolor{title}{fg=white,bg=mainblue}
+  - \setbeamercolor{frametitle}{bg=mainblue, fg=white}
+  - \setbeamerfont{frametitle}{series=\bfseries}
+  - \setbeamercolor{section in toc}{fg=darkblue}
+  - \setbeamercolor{subsection in toc}{fg=mainblue!70}
+  - \setbeamercolor{item}{fg=mainblue}
+  - \setbeamertemplate{itemize item}{\textcolor{mainblue}{\textbullet}}
+  - \setbeamertemplate{itemize subitem}{\textcolor{midblue}{\textbullet}}
+  - \setbeamercolor{block title}{bg=mainblue, fg=white}
+  - \setbeamercolor{block body}{bg=paleblue, fg=black}
+  - \setbeamercolor{alerted text}{fg=darkblue}
+  - \setbeamertemplate{footline}{\begin{beamercolorbox}[wd=\paperwidth,ht=2.6ex,dp=1.2ex,leftskip=1em,rightskip=1em]{structure}\color{grayish}\scriptsize Filière du Mil et Sécurité Alimentaire au Niger \hfill \color{mainblue}\bfseries\insertframenumber\,/\,\inserttotalframenumber\end{beamercolorbox}}
+  - \newcommand{\tblhead}[1]{\textcolor{white}{\bfseries #1}}
+  - \renewcommand{\arraystretch}{1.25}
+  - \AtBeginSection[]{\begin{frame}<beamer>\frametitle{Plan}\tableofcontents[currentsection, hideothersubsections]\end{frame}}
+---
+
+## {.plain .noframenumbering}
+
+\begin{center}
+
+% --- LOGOS AVEC NOMS DES INSTITUTIONS ---
+\begin{minipage}[t]{0.32\textwidth}
+\centering
+\includegraphics[height=1.4cm]{figures/ENSAE.png}\\[0.1cm]
+\fontsize{5pt}{6pt}\selectfont \textbf{École nationale de la statistique et\\de l'analyse économique Pierre Ndiaye}
+\end{minipage}
+\hfill
+\begin{minipage}[t]{0.28\textwidth}
+\centering
+\includegraphics[height=1.4cm]{figures/SEN.jpg}\\[0.1cm]
+\fontsize{5pt}{6pt}\selectfont \textbf{République du Sénégal}
+\end{minipage}
+\hfill
+\begin{minipage}[t]{0.32\textwidth}
+\centering
+\includegraphics[height=1.4cm]{figures/ANSD.png}\\[0.1cm]
+\fontsize{5pt}{6pt}\selectfont \textbf{Agence nationale de la statistique\\et de la démographie}
+\end{minipage}
+
+\vspace{0.6cm}
+
+% --- TITRE ENCADRÉ ---
+\fcolorbox{mainblue}{lightblue}{
+\begin{minipage}{0.9\textwidth}
+\centering
+\vspace{0.3cm}
+{\Large \bfseries \textcolor{mainblue}{Étude de la Filière du Mil et Sécurité Alimentaire au Niger}} \\[0.2cm]
+{\large Analyse des données EHCVM 2021}
+\vspace{0.3cm}
+\end{minipage}
+}
+
+\vspace{0.8cm}
+
+% --- AUTEURS ET SUPERVISEUR ---
+\begin{columns}[t]
+\begin{column}{0.5\textwidth}
+\centering
+{\small \textbf{Présenté par :}} \\[0.1cm]
+{\normalsize Thierno \textsc{Bocoum} \& Ndeye Khoudia \textsc{Diop}} \\[0.1cm]
+{\scriptsize \textit{Élèves Ingénieurs Statisticiens Économistes}}
+\end{column}
+
+\begin{column}{0.5\textwidth}
+\centering
+{\small \textbf{Sous la supervision de :}} \\[0.1cm]
+{\normalsize M. Mouhamadou Hady \textsc{Diallo}} \\[0.1cm]
+{\scriptsize \textit{Ingénieur des Travaux Statistiques}}
+\end{column}
+\end{columns}
+
+\vfill
+
+% --- ANNÉE ACADÉMIQUE ---
+{\footnotesize \textbf{Année académique 2025--2026}}
+
+\end{center}
+
+## Plan de la présentation
+
+\tableofcontents[hideallsubsections]
+
+# Contexte et données
+
+## Contexte de l'étude
+
+- Le Niger est un pays sahélien où la **sécurité alimentaire** est un enjeu majeur.
+- Le **Mil** est une culture pluviale résistante, adaptée au climat.
+- Une compréhension complète de la filière est essentielle pour orienter les politiques publiques.
+
+## Objectifs de l'étude
+
+\begin{block}{Objectif général}
+Analyser le rôle stratégique du Mil dans la sécurité alimentaire et l'économie rurale nigérienne.
+\end{block}
+
+- Justifier empiriquement son importance stratégique.
+- Profiler les ménages producteurs et consommateurs.
+- Estimer les rendements et leurs déterminants.
+- Analyser la commercialisation et les marges.
+- Évaluer l'impact de la filière sur l'insécurité alimentaire.
+
+## Données et sources
+
+- **Source principale :** Enquête EHCVM 2021 (Niger) -- Questionnaire Ménage.
+- **Source auxiliaire :** Questionnaire Communautaire (QC).
+- **Sections clés mobilisées :** S01 (démographie), S07B (consommation), S08A (FIES), S16A-D (production et commercialisation), QC-S3 (agriculture locale) et QC-S5 (prix communautaires).
+
+## Méthodologie et traitement des données
+
+- **Pondération :** Toutes les statistiques sont pondérées par `hhweight`.
+- **Gestion du format Stata :** Variables converties en numériques via `as.numeric()`.
+- **Nettoyage :** Filtrage des lignes avec `vague == NA` dans S16C pour éviter les doublons de ménages.
+- **Superficies :** Uniformisation des unités en Hectares (1=Ha, 2=Are).
+
+# Choix et justification du produit stratégique
+
+## Critères de choix du Mil
+
+\centering
+\vspace{0.3cm}
+\begin{columns}[T]
+\begin{column}{0.32\textwidth}
+\centering
+\begin{tikzpicture}
+\node[draw=mainblue,line width=1pt,fill=paleblue,rounded corners,text width=3.3cm,align=center,inner sep=10pt,minimum height=2.6cm] {
+\textbf{Sécurité alimentaire}\\[4pt]
+\footnotesize Consommation et disponibilité calorique
+};
+\end{tikzpicture}
+\end{column}
+\begin{column}{0.32\textwidth}
+\centering
+\begin{tikzpicture}
+\node[draw=mainblue,line width=1pt,fill=paleblue,rounded corners,text width=3.3cm,align=center,inner sep=10pt,minimum height=2.6cm] {
+\textbf{Production agricole}\\[4pt]
+\footnotesize Superficies et ménages producteurs
+};
+\end{tikzpicture}
+\end{column}
+\begin{column}{0.32\textwidth}
+\centering
+\begin{tikzpicture}
+\node[draw=mainblue,line width=1pt,fill=paleblue,rounded corners,text width=3.3cm,align=center,inner sep=10pt,minimum height=2.6cm] {
+\textbf{Rôle économique}\\[4pt]
+\footnotesize Part dans le revenu agricole total
+};
+\end{tikzpicture}
+\end{column}
+\end{columns}
+
+## Critère 1 : Importance pour la sécurité alimentaire
+
+\begin{columns}[T]
+\begin{column}{0.65\textwidth}
+\includegraphics[width=\linewidth]{figures/1_frequence_consommation.png}
+\end{column}
+\begin{column}{0.35\textwidth}
+\vspace{0.6cm}
+\begin{block}{Résultat clé}
+\small Le Mil est le produit le plus consommé avec \textbf{79,2 \%} des ménages.
+\end{block}
+\end{column}
+\end{columns}
+
+## Méthode de calcul de la fréquence de consommation
+
+**Démarche :**
+
+- Utilisation de la variable `s07bq02` (Avez-vous consommé ce produit ?) de la base S7B.
+- Exclusion des condiments de base (Sel, Cube, Sucre, Piment) pour ne conserver que les produits agricoles stratégiques.
+- Dénominateur : **6 622** ménages uniques de l'enquête EHCVM.
+- Le Mil est consommé par **79,2 %** des ménages, soit le 1^er^ rang.
+
+## Critère 2 : Poids dans la production agricole
+
+\begin{columns}[T]
+\begin{column}{0.55\textwidth}
+\includegraphics[width=\linewidth]{figures/2_surface_agricole.png}
+\end{column}
+\begin{column}{0.45\textwidth}
+\small
+\rowcolors{2}{lightblue}{white}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{lcc}
+\toprule
+\rowcolor{mainblue} \tblhead{Produit} & \tblhead{Surface} & \tblhead{Ménages} \\
+\midrule
+\textbf{Mil} & \textbf{51,8 \%} & \textbf{67,4 \%} \\
+Niébé & 22,7 \% & 55,5 \% \\
+Sorgho & 16,8 \% & 41,4 \% \\
+\bottomrule
+\end{tabular}
+\end{column}
+\end{columns}
+
+## Méthode de calcul des superficies
+
+- **Uniformisation :** Conversion des unités déclarées en Hectares via `s16aq09b` (1=Ha, 2=Are/100).
+- **Cultures associées (règle de la parcelle) :**
+    - Si `s16cq08` (pourcentage d'occupation) est renseigné : allocation proportionnelle de la surface.
+    - Si `s16cq08` est manquant (cultures complètement mélangées) : attribution de la surface totale à chaque culture.
+- Le Mil occupe **51,8 %** de la superficie nationale.
+
+## Critère 3 : Rôle économique
+
+\begin{columns}[T]
+\begin{column}{0.6\textwidth}
+\includegraphics[width=\linewidth]{figures/4_revenu_agricole.png}
+\end{column}
+\begin{column}{0.4\textwidth}
+\vspace{0.6cm}
+\begin{block}{Résultat clé}
+\small Le Mil génère \textbf{14,5 \%} du revenu agricole total (3\textsuperscript{ème} rang après le Niébé et l'Arachide).
+\end{block}
+\end{column}
+\end{columns}
+
+## Synthèse du choix stratégique
+
+- **1^er^ produit consommé** : 79,2 % des ménages.
+- **1^er^ en surface cultivée** : 51,8 % des terres.
+- **1^er^ en nombre de producteurs** : 67,4 % des ménages agricoles.
+- **3^e^ générateur de revenus agricoles** : 14,5 % du revenu total.
+
+\vspace{0.5cm}
+\begin{alertblock}{Conclusion}
+\centering \textbf{Ces statistiques confirment que le Mil est le produit stratégique du Niger.}
+\end{alertblock}
+
+# Profilage des ménages
+
+## Typologie des 4 groupes de ménages
+
+Classification croisée basée sur la consommation (S07B) et la production (S16C) :
+
+- **Producteur-Consommateur :** Produit et consomme le Mil.
+- **Consommateur uniquement :** Achète mais ne produit pas.
+- **Ni producteur ni consommateur :** Aucun lien avec la filière.
+- **Producteur uniquement :** Produit pour la vente uniquement.
+
+## Tableau de profilage des ménages
+
+\centering
+\rowcolors{2}{lightblue}{white}
+\renewcommand{\arraystretch}{1.35}
+\resizebox{\textwidth}{!}{
+\begin{tabular}{lccccc}
+\toprule
+\rowcolor{mainblue} \tblhead{Groupe} & \tblhead{Taille} & \tblhead{Score FIES} & \tblhead{Urbain} & \tblhead{Conso/tête} & \tblhead{Intrants} \\
+\midrule
+Producteur-Consommateur & 5,48 & 3,56 & 3,9 \% & 7 236 FCFA & 7 516 FCFA \\
+Consommateur uniquement & 4,52 & 2,80 & 47,6 \% & 11 615 FCFA & 1 562 FCFA \\
+Ni prod. ni conso. & 4,42 & 2,16 & 80,3 \% & 15 306 FCFA & 847 FCFA \\
+Producteur uniquement & 5,65 & 3,58 & 14,1 \% & 7 468 FCFA & 11 983 FCFA \\
+\bottomrule
+\end{tabular}
+}
+
+## Interprétation : Le paradoxe des producteurs
+
+- Les **producteurs** ont les scores FIES les plus élevés (3,56 -- 3,58), signifiant une **plus grande insécurité alimentaire**.
+- **Pourquoi ?** Forte dépendance aux aléas climatiques. Les mauvaises récoltes impactent directement l'alimentation.
+- Les **Producteurs uniquement** investissent massivement dans les intrants (11 983 FCFA), reflétant une stratégie de commercialisation intense mais risquée.
+
+## Niveau de vie et stratégies d'intrants
+
+\begin{columns}[T]
+\begin{column}{0.55\textwidth}
+\begin{itemize}
+\small
+\item Les ménages \textbf{Ni producteur ni consommateur} (urbains) ont le niveau de vie le plus élevé (15 306 FCFA/conso.tête) et le meilleur score FIES (2,16).
+\item Les \textbf{Consommateurs uniquement} dépensent plus en alimentation (11 615 FCFA) car ils achètent tout sur le marché.
+\item La \textbf{pluriactivité} (agriculture + élevage) est une stratégie de diversification, qui sera analysée plus loin.
+\end{itemize}
+\end{column}
+\begin{column}{0.45\textwidth}
+\centering
+\includegraphics[width=\linewidth]{figures/fies_score_par_groupe.png}
+\end{column}
+\end{columns}
+
+# Production et rendements
+
+## Calcul du rendement agricole
+
+\begin{block}{Formule}
+\centering Rendement $= \dfrac{\text{Quantité récoltée (kg)}}{\text{Surface (ha)}}$
+\end{block}
+
+- **Quantité en kg :** Multiplication de la quantité locale par le facteur de conversion `s16cq16c`.
+- **Surface en Ha :** Uniformisation des unités (Hectares vs Ares).
+- **Winsorisation :** Élimination des valeurs extrêmes (P1 et P99).
+
+## Conversion des unités locales (kg)
+
+- Dans l'EHCVM, la récolte est déclarée en unités locales (ex: tasse, panier, botte).
+- La variable `s16cq16c` fournit l'**équivalence en kg** pour une Unité de Mesure Locale (UML).
+- **Formule utilisée :**
+$$ \text{Quantité en kg} = \text{Quantité locale} \times \text{Facteur de conversion (s16cq16c)} $$
+- Une erreur sur cette conversion fausserait tous les rendements. La winsorisation permet de corriger les valeurs extrêmes dues à d'éventuelles erreurs de saisie.
+
+## Statistiques de rendement
+
+\begin{columns}[T]
+\begin{column}{0.58\textwidth}
+\includegraphics[width=\linewidth]{figures/histogramme_rendement_mil.png}
+\end{column}
+\begin{column}{0.42\textwidth}
+\vspace{0.6cm}
+\begin{itemize}
+\item \textbf{Médiane :} 2 940 kg/ha (le plus représentatif de la réalité).
+\item \textbf{Moyenne :} 9 439 kg/ha (tirée vers le haut par les extrêmes).
+\item \textbf{Écart-type :} 17 591 kg/ha.
+\end{itemize}
+\end{column}
+\end{columns}
+
+## Modèle OLS des déterminants du rendement
+
+**Spécification économétrique :**
+\begin{align*}
+\ln(\text{Rendement}_{ij}) &= \alpha + \beta_1 \text{Intrants}_{ij} + \beta_2 \text{Semences}_{ij} \\
+&\quad + \beta_3 \text{Irrigation}_{ij} + \beta_4 \text{Éducation}_i + \gamma_j + \varepsilon_{ij}
+\end{align*}
+\small{(Où $\gamma_j$ désigne les effets fixes de grappe, remplacés ici par les variables du questionnaire communautaire QC-S3 : présence de coopératives, services de vulgarisation, accès aux engrais).}
+
+## Résultats de la régression OLS
+
+\centering
+\rowcolors{2}{lightblue}{white}
+\renewcommand{\arraystretch}{1.3}
+\resizebox{\textwidth}{!}{
+\begin{tabular}{lcc}
+\toprule
+\rowcolor{mainblue} \tblhead{Variable} & \tblhead{Coefficient} & \tblhead{P-value} \\
+\midrule
+\textbf{Service de vulgarisation} & + 0,405 & < 0,001 *** \\
+\textbf{Accès aux engrais chimiques} & -- 0,600 & < 0,001 *** \\
+Surface de la parcelle (log) & -- 0,173 & 0,003 ** \\
+Accès aux semences améliorées & + 0,065 & 0,526 \\
+Pratique de l'irrigation & + 0,141 & 0,112 \\
+\bottomrule
+\end{tabular}
+}
+\vspace{0.2cm}
+\footnotesize{R\textsuperscript{2} ajusté : 2,6 \% ; Modèle globalement significatif (p < 0,001).}
+
+## Interprétation des déterminants
+
+- **Service de vulgarisation :** Effet **fortement positif**. Premier levier pour améliorer les rendements. Une politique ciblant ces services serait hautement efficace.
+- **Accès aux engrais chimiques :** Effet **négatif surprenant**. Expliqué probablement par un mauvais dosage, une qualité médiocre, ou un biais de sélection (agriculteurs en difficulté achètent plus d'engrais). À investiguer.
+- **Surface de la parcelle :** Effet négatif. Conforme à la loi des rendements décroissants.
+
+# Commercialisation et prix
+
+## Canaux de vente du Mil
+
+\begin{columns}[T]
+\begin{column}{0.55\textwidth}
+\includegraphics[width=\linewidth]{figures/canaux_vente.png}
+\end{column}
+\begin{column}{0.45\textwidth}
+\vspace{0.4cm}
+\textbf{Les marchés dominent la vente :}
+\begin{itemize}
+\small
+\item 60,8 \% des ventes se font sur les \textbf{marchés}.
+\item 38,0 \% via des \textbf{intermédiaires}.
+\item La vente directe aux coopératives ou consommateurs est marginale (< 1,5 \%).
+\end{itemize}
+\end{column}
+\end{columns}
+
+## Méthodes de stockage du Mil
+
+\centering
+\includegraphics[width=0.66\linewidth]{figures/methodes_stockage.png}
+\vspace{0.25cm}
+
+\small{\textbf{Observation :} Le stockage est majoritairement traditionnel (magasins, greniers, toit de la maison). Les coopératives sont très peu utilisées pour le stockage.}
+
+## Calcul de la marge commerciale
+
+\begin{block}{Définition}
+\centering \small Marge commerciale (FCFA/kg) = Prix marché (QC-S5) $-$ Prix producteur (S16D)
+\end{block}
+
+- **Prix producteur :** Calculé depuis la base S16D en divisant le montant total des ventes par la quantité vendue.
+- **Prix marché :** Prix de détail du produit dans les marchés locaux issu du questionnaire communautaire (QC-S5).
+- **Objectif :** Identifier les régions où la marge est la plus élevée (zones d'intervention prioritaire).
+
+## Marge commerciale par région
+
+\centering
+\rowcolors{2}{lightblue}{white}
+\renewcommand{\arraystretch}{1.3}
+\resizebox{0.85\textwidth}{!}{
+\begin{tabular}{lccc}
+\toprule
+\rowcolor{mainblue} \tblhead{Région} & \tblhead{Prix Prod.} & \tblhead{Prix Marché} & \tblhead{Marge} \\
+\midrule
+\textbf{Tillabéri} & 238 & 333 & \textbf{+39,9 \%} \\
+\textbf{Diffa} & 223 & 309 & \textbf{+38,6 \%} \\
+Dosso & 230 & 309 & +34,3 \% \\
+Zinder & 241 & 321 & +33,2 \% \\
+Maradi & 222 & 281 & +26,6 \% \\
+Tahoua & 270 & 304 & +12,6 \% \\
+\bottomrule
+\end{tabular}
+}
+\vspace{0.25cm}
+\footnotesize{(FCFA/kg). Tillabéri et Diffa sont des zones prioritaires pour l'accès au marché.}
+
+## Carte des marges par grappe
+
+\begin{columns}[T]
+\begin{column}{0.65\textwidth}
+\includegraphics[width=\linewidth]{map-marge-1.png}
+\end{column}
+\begin{column}{0.35\textwidth}
+\vspace{0.6cm}
+\begin{itemize}
+\small
+\item Points \textcolor{red}{rouges} = marges élevées.
+\item Points \textcolor{blue}{bleus} = marges faibles ou négatives.
+\item \textbf{Tillabéri} et \textbf{Dosso} ont les plus fortes marges.
+\item Identification des zones d'intervention prioritaire.
+\end{itemize}
+\end{column}
+\end{columns}
+
+# Sécurité alimentaire et impact filière
+
+## Problématique de l'impact filière
+
+\begin{block}{Question centrale}
+La production et/ou la vente du Mil améliorent-elles la sécurité alimentaire, ou la vente réduit-elle la consommation propre (effet d'éviction) ?
+\end{block}
+\vspace{0.2cm}
+**Problème économétrique :** *Endogénéité*. La causalité est inverse (les ménages en insécurité peuvent réduire leur production).
+
+- La simple régression OLS est donc biaisée.
+- Solution : **Approche par variable instrumentale (2SLS)**.
+
+## Méthode IV/2SLS
+
+**Instruments choisis :**
+
+- **Accès à l'irrigation** (au niveau de la grappe) : influence la production, mais pas directement la sécurité alimentaire hors production.
+- **Temps d'accès au marché** : influence les décisions de vente, mais pas le score FIES directement.
+
+\vspace{0.2cm}
+**Spécification :** Effets fixes régionaux, robustesse testée via la comparaison avec le modèle OLS et le modèle HDDS.
+
+## Résultats de la régression IV/2SLS
+
+\centering
+\rowcolors{2}{lightblue}{white}
+\renewcommand{\arraystretch}{1.3}
+\resizebox{0.9\textwidth}{!}{
+\begin{tabular}{lccc}
+\toprule
+\rowcolor{mainblue} \tblhead{Variable} & \tblhead{Coefficient} & \tblhead{Écart-type} & \tblhead{P-value} \\
+\midrule
+Statut producteur (IV) & -5,938 & 2,463 & 0,016 * \\
+Log(Revenu agricole) & -0,306 & 0,055 & < 0,001 *** \\
+A vendu & +3,017 & 0,587 & < 0,001 *** \\
+Log(Dépense/tête) & -1,733 & 0,172 & < 0,001 *** \\
+\bottomrule
+\end{tabular}
+}
+\vspace{0.2cm}
+\footnotesize{Effets fixes régionaux ; R\textsuperscript{2} ajusté = 9,4 \% ; N = 4 057}
+
+## Interprétation des résultats IV/2SLS
+
+- **Statut producteur :** Réduit le score FIES de $\sim$ 6 points $\Rightarrow$ La production améliore fortement la sécurité alimentaire.
+- **Revenu agricole :** Effet protecteur significatif.
+- **A vendu :** Effet **négatif paradoxal** (augmente le score FIES). Indique un possible **effet d'éviction** ou une vente à bas prix juste après la récolte (vente de détresse).
+- **Dépense par tête :** Déterminant le plus puissant de la sécurité alimentaire.
+
+## Comparaison des modèles (OLS vs IV vs HDDS)
+
+\begin{columns}[T]
+\begin{column}{0.45\textwidth}
+\begin{itemize}
+\small
+\item Pour valider la robustesse des résultats, le modèle IV a été comparé avec le modèle OLS et un modèle alternatif utilisant le score \textbf{HDDS} comme variable dépendante.
+\item Les résultats convergent : la production améliore significativement la sécurité alimentaire.
+\item L'effet d'éviction lié à la vente est également confirmé.
+\end{itemize}
+\end{column}
+\begin{column}{0.55\textwidth}
+\centering
+\includegraphics[width=\linewidth]{figures/comparaison_modeles.png}
+\end{column}
+\end{columns}
+
+## Carte de la sécurité alimentaire
+
+\begin{columns}[T]
+\begin{column}{0.65\textwidth}
+\includegraphics[width=\linewidth]{carte_fies_region.png}
+\end{column}
+\begin{column}{0.35\textwidth}
+\vspace{0.6cm}
+\begin{itemize}
+\small
+\item Score FIES moyen par région.
+\item \textcolor{red}{Rouge} = insécurité sévère.
+\item \textcolor{green}{Vert} = sécurité alimentaire.
+\item Zones prioritaires : Maradi, Zinder, Dosso.
+\end{itemize}
+\end{column}
+\end{columns}
+
+## Pluriactivité (Agriculture + Élevage)
+
+\begin{columns}[T]
+\begin{column}{0.5\textwidth}
+\includegraphics[width=\linewidth]{figures/pluriactivite_fies.png}
+\end{column}
+\begin{column}{0.5\textwidth}
+\vspace{0.4cm}
+\begin{itemize}
+\small
+\item \textbf{Effet principal :} Protection modeste contre l'insécurité alimentaire (coefficient -0,155, p < 0,05).
+\item \textbf{Interaction coopérative :} L'effet protecteur est atténué dans les zones avec coopératives (coefficient +0,719, p < 0,001).
+\item \textbf{Interaction irrigation :} Non significative.
+\end{itemize}
+\end{column}
+\end{columns}
+
+## Limites de l'analyse
+
+- **Endogénéité résiduelle :** La restriction d'exclusion des instruments n'est pas formellement testable.
+- **Décalage temporel :** Le score FIES porte sur les 12 derniers mois, alors que la production porte sur la campagne agricole en cours.
+- **Pluriactivité :** Mesurée par une variable binaire simple, ne capte pas l'intensité de l'activité d'élevage.
+- **Marge commerciale :** Une approximation grossière car elle ignore les coûts de transport et de transformation.
+
+# Conclusion et recommandations
+
+## Synthèse générale
+
+- Le **Mil** est le produit stratégique du Niger (79 % conso., 52 % surface, 14,5 % revenu).
+- Les producteurs sont paradoxalement plus vulnérables à l'insécurité alimentaire.
+- **Rendements :** La vulgarisation est le principal levier d'amélioration.
+- **Marges :** Fortes disparités régionales (Tillabéri, Diffa prioritaires).
+- **Impact :** La participation à la filière améliore la sécurité alimentaire, mais la vente précoce crée un effet d'éviction.
+
+## Recommandations politiques
+
+\begin{block}{Actions recommandées}
+\begin{itemize}
+\item Renforcer les \textbf{services de vulgarisation agricole}.
+\item Promouvoir le \textbf{stockage} et la vente différée (éviter les ventes à bas prix).
+\item Améliorer les \textbf{infrastructures de marché} à Tillabéri et Diffa.
+\item Encourager la \textbf{pluriactivité} tout en surveillant l'effet des coopératives.
+\item Approfondir par des \textbf{études qualitatives} sur l'usage des engrais chimiques.
+\end{itemize}
+\end{block}
+
+## {.plain .noframenumbering}
+
+\centering
+\vspace{2cm}
+{\Huge \bfseries \textcolor{mainblue}{Merci de votre attention}} \\[1cm]
+{\Large Questions ?}
+\vspace{1.5cm}
+
+\rule{0.5\textwidth}{0.5pt}
+
+\vspace{0.5cm}
+{\small Thierno Bocoum \& Ndeye Khoudia Diop \\ ENSAE Pierre Ndiaye -- Année académique 2025--2026}

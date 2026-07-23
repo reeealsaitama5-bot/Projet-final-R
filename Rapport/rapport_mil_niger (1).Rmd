@@ -1,0 +1,637 @@
+---
+title: "Étude de la Filière du Mil et Sécurité Alimentaire au Niger"
+subtitle: "Projet Final -- Traitement Statistique avec R"
+author: "Thierno BOCOUM & Ndeye Khoudia DIOP"
+date: "Année académique 2025--2026"
+output:
+  pdf_document:
+    latex_engine: pdflatex
+    keep_tex: true
+    number_sections: true
+    toc: true
+    fig_caption: true
+    extra_dependencies: ["booktabs","longtable","array","float","xcolor","colortbl","multirow","caption","fancyhdr","titlesec","etoolbox"]
+header-includes:
+  - \usepackage[T1]{fontenc}
+  - \IfFileExists{lmodern.sty}{\usepackage{lmodern}}{}
+  - \usepackage[margin=2.5cm]{geometry}
+  - \usepackage{amsmath,amssymb}
+  - \setcounter{secnumdepth}{5}
+  - \IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+  - \definecolor{titleblue}{RGB}{31,73,125}
+  - \definecolor{mainblue}{RGB}{31,73,125}
+  - \definecolor{paleblue}{RGB}{219,232,245}
+  - \definecolor{lightblue}{RGB}{234,242,250}
+  - \titleformat{\section}{\normalfont\Large\bfseries\color{titleblue}}{\thesection}{1em}{}
+  - \titleformat{\subsection}{\normalfont\large\bfseries\color{titleblue}}{\thesubsection}{1em}{}
+  - \titleformat{\subsubsection}{\normalfont\normalsize\bfseries\color{titleblue}}{\thesubsubsection}{1em}{}
+  - \pagestyle{fancy}
+  - \fancyhf{}
+  - \fancyhead[L]{\small Rapport Projet Filière -- Mil, Niger (EHCVM 2021)}
+  - \fancyhead[R]{\small ENSAE Pierre Ndiaye -- ISEP 2}
+  - \fancyfoot[C]{\thepage}
+  - \captionsetup[table]{labelfont={bf,color=titleblue}}
+  - \captionsetup[figure]{labelfont={bf,color=titleblue}}
+  - \newcommand{\tblhead}[1]{\textcolor{white}{\textbf{#1}}}
+  - \providecommand{\subtitle}[1]{\apptocmd{\@title}{\par {\large #1 \par}}{}{}}
+documentclass: article
+fontsize: 12pt
+lang: fr
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE,
+                       fig.align = "center")
+library(haven)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(knitr)
+library(kableExtra)
+library(survey)
+library(AER)      # ivreg pour le module 5
+library(sf)       # cartes régionales / grappes
+
+dir.create("figures", showWarnings = FALSE)
+
+# --- Chargement des modules EHCVM 2021 (Niger) ---
+s01   <- read_dta("data/s01_demographie.dta")
+s07b  <- read_dta("data/s07b_consommation.dta")
+s08a  <- read_dta("data/s08a_fies.dta")
+s16a  <- read_dta("data/s16a_parcelles.dta")
+s16c  <- read_dta("data/s16c_production.dta") %>% filter(!is.na(vague))
+s16d  <- read_dta("data/s16d_commercialisation.dta")
+s17   <- read_dta("data/s17_elevage.dta")
+qc_s2 <- read_dta("data/qc_s2_infrastructures.dta")
+qc_s3 <- read_dta("data/qc_s3_cooperatives.dta")
+qc_s5 <- read_dta("data/qc_s5_prix_marches.dta")
+
+# Conversion des variables labellisées Stata -> numérique
+to_num <- function(df) df %>% mutate(across(where(is.labelled), as.numeric))
+s01 <- to_num(s01); s07b <- to_num(s07b); s08a <- to_num(s08a)
+s16a <- to_num(s16a); s16c <- to_num(s16c); s16d <- to_num(s16d); s17 <- to_num(s17)
+
+# Uniformisation des surfaces (1 are = 0,01 ha) et règle des cultures associées
+s16a <- s16a %>%
+  mutate(surface_ha = if_else(unite_surface == "are", s16aq09b / 100, s16aq09b))
+```
+
+# Contexte et méthodologie
+
+## Contexte de l'étude
+
+Le Niger, pays sahélien, est confronté à des défis majeurs de **sécurité alimentaire**. Le **Mil** (*Pennisetum glaucum*) est une culture pluviale résistante, adaptée aux sols pauvres. Il constitue l'aliment de base des populations rurales et un pilier de l'économie agricole du pays.
+
+L'objectif de cette étude est de comprendre la filière du Mil, de la production à la consommation, afin d'orienter les politiques publiques en matière de sécurité alimentaire.
+
+## Objectifs de l'étude
+
+**Objectif général :** analyser le rôle stratégique du Mil dans la sécurité alimentaire et l'économie rurale nigérienne.
+
+1. Justifier empiriquement l'importance stratégique du Mil (Module 1).
+2. Profiler les ménages producteurs et consommateurs (Module 2).
+3. Estimer les rendements et leurs déterminants (Module 3).
+4. Analyser la commercialisation, les prix et les marges (Module 4).
+5. Évaluer l'impact de la filière sur la sécurité alimentaire (Module 5).
+
+## Sources de données
+
+Cette étude s'appuie principalement sur l'Enquête Harmonisée sur les Conditions de Vie des Ménages (EHCVM) réalisée au Niger en 2021. Le questionnaire ménage a été mobilisé à travers plusieurs modules complémentaires : le module S01 relatif à la démographie, le module S07B portant sur la consommation, le module S08A consacré à l'échelle de sécurité alimentaire fondée sur l'expérience (FIES), ainsi que les modules S16A à S16D relatifs à la production et à la commercialisation agricoles et le module S17 relatif à l'élevage. Le questionnaire communautaire a également été exploité, notamment ses volets QC-S2 (distances et infrastructures), QC-S3 (coopératives et intrants) et QC-S5 (prix des marchés locaux). Ces données ont enfin été complétées par des sources auxiliaires telles que FAOSTAT, les données pluviométriques CHIRPS et les fonds de carte GADM.
+
+## Méthodologie et traitement des données
+
+L'ensemble des statistiques et des régressions présentées dans ce rapport a été pondéré par la variable `hhweight`, afin de garantir la représentativité des estimations au niveau national. Les variables issues du format Stata, initialement de type `haven_labelled`, ont été converties en variables numériques à l'aide de la fonction `as.numeric()`. Un nettoyage spécifique a par ailleurs été appliqué au module S16C, consistant à filtrer les lignes pour lesquelles la variable `vague` était manquante, de manière à éviter tout doublon de ménages. Les superficies déclarées ont été uniformisées en hectares, une are correspondant à un centième d'hectare. Lorsque la variable `s16cq08`, relative aux cultures associées, était manquante, la surface totale de la parcelle a été attribuée à chaque culture qui y était cultivée. Enfin, le score de sécurité alimentaire fondé sur l'expérience (FIES) a été construit à partir de huit questions dichotomiques, donnant lieu à un score compris entre 0 et 8 ; conformément aux seuils retenus par la FAO, un score supérieur ou égal à 3 caractérise une insécurité alimentaire modérée, et un score supérieur ou égal à 6 une insécurité alimentaire sévère.
+
+\clearpage
+
+# Module 1 --- Choix du Mil comme produit stratégique
+
+Le choix du Mil comme produit stratégique repose sur trois critères complémentaires, à savoir la sécurité alimentaire, appréciée à travers la consommation et la disponibilité calorique, la production agricole, mesurée par les superficies cultivées et le nombre de ménages producteurs, et enfin le rôle économique, apprécié par la part du Mil dans le revenu agricole total.
+
+## Fréquence de consommation
+
+```{r frequence-consommation, fig.width=7, fig.height=4}
+conso <- s07b %>%
+  filter(!code_produit %in% codes_condiments) %>%
+  group_by(produit) %>%
+  summarise(part = sum(hhweight * (s07bq02 == 1), na.rm = TRUE) /
+              sum(hhweight, na.rm = TRUE) * 100) %>%
+  arrange(desc(part))
+
+g_freq <- ggplot(conso, aes(x = reorder(produit, part), y = part)) +
+  geom_col(fill = "#1F497D") +
+  coord_flip() +
+  labs(x = NULL, y = "% de ménages consommateurs", title = NULL) +
+  theme_minimal()
+ggsave("figures/1_frequence_consommation.png", g_freq, width = 7, height = 4, dpi = 300)
+g_freq
+```
+
+L'analyse de la fréquence de consommation des principaux produits alimentaires, présentée à la figure \ref{fig:frequence}, montre que le Mil est le produit le plus largement consommé au Niger, puisqu'il est présent dans l'alimentation de 79,2 % des ménages. Ce résultat a été obtenu à partir de la variable `s07bq02`, qui renseigne la consommation effective des ménages ; les condiments de base ont été exclus du champ de l'analyse afin de ne considérer que les aliments constituant véritablement la base du régime alimentaire.
+
+## Poids dans la production agricole
+
+```{r surface-agricole, fig.width=6, fig.height=4}
+surface_culture <- s16a %>%
+  group_by(culture) %>%
+  summarise(surface_tot = sum(surface_ha * hhweight, na.rm = TRUE),
+            n_menages   = n_distinct(hhid[!is.na(surface_ha)])) %>%
+  mutate(part_surface = surface_tot / sum(surface_tot) * 100)
+
+g_surf <- ggplot(surface_culture, aes(x = reorder(culture, part_surface), y = part_surface)) +
+  geom_col(fill = "#1F497D") + coord_flip() +
+  labs(x = NULL, y = "% de la surface cultivée totale") + theme_minimal()
+ggsave("figures/2_surface_agricole.png", g_surf, width = 6, height = 4, dpi = 300)
+g_surf
+```
+
+Le Mil occupe également une place prépondérante dans la production agricole nigérienne. Comme l'illustre la figure \ref{fig:surface}, il concentre à lui seul plus de la moitié des surfaces cultivées dans le pays. Le tableau \ref{tab:surface} confirme cette prééminence en la comparant à celle des deux autres cultures les plus répandues.
+
+```{r tab-surface}
+tab_surface <- data.frame(
+  Culture = c("Mil", "Niébé", "Sorgho"),
+  Surface = c("51,8 %", "22,7 %", "16,8 %"),
+  Menages = c("67,4 %", "55,5 %", "41,4 %")
+)
+kable(tab_surface, booktabs = TRUE, align = "lcc",
+      col.names = c("Culture", "Surface", "Ménages"),
+      caption = "Part de surface et de ménages producteurs par culture") %>%
+  kable_styling(latex_options = "hold_position") %>%
+  row_spec(0, background = "mainblue", color = "white", bold = TRUE) %>%
+  row_spec(1, bold = TRUE)
+```
+
+Ainsi, le Mil est cultivé par 51,8 % des surfaces agricoles totales et par 67,4 % des ménages agricoles, loin devant le niébé et le sorgho. Ces indicateurs ont été construits après uniformisation des surfaces déclarées à partir de la variable `s16aq09b` et application de la règle relative aux cultures associées décrite précédemment.
+
+## Rôle économique
+
+```{r revenu-agricole, fig.width=6.5, fig.height=4}
+revenu_culture <- s16d %>%
+  group_by(culture) %>%
+  summarise(revenu = sum(montant_vente * hhweight, na.rm = TRUE)) %>%
+  mutate(part_revenu = revenu / sum(revenu) * 100)
+
+g_rev <- ggplot(revenu_culture, aes(x = reorder(culture, part_revenu), y = part_revenu)) +
+  geom_col(fill = "#1F497D") + coord_flip() +
+  labs(x = NULL, y = "% du revenu agricole total") + theme_minimal()
+ggsave("figures/4_revenu_agricole.png", g_rev, width = 6.5, height = 4, dpi = 300)
+g_rev
+```
+
+Sur le plan économique, le Mil génère 14,5 % du revenu agricole total des ménages, ce qui le place au troisième rang des cultures les plus rémunératrices, comme le montre la figure \ref{fig:revenu}.
+
+## Synthèse du module
+
+L'ensemble de ces éléments converge vers un même constat : le Mil est, à la fois, le premier produit consommé par les ménages nigériens, avec 79,2 % d'entre eux qui le consomment, la première culture en termes de surface cultivée, avec 51,8 % des terres agricoles, la première culture en nombre de producteurs, avec 67,4 % des ménages agricoles concernés, et le troisième générateur de revenus agricoles, avec 14,5 % du revenu total. Ces statistiques confirment ainsi que le Mil constitue le produit stratégique du Niger, tant sur le plan alimentaire qu'économique.
+
+\clearpage
+
+# Module 2 --- Profilage des ménages
+
+## Typologie des ménages
+
+```{r typologie, include=FALSE}
+menages_typo <- s01 %>%
+  left_join(s07b %>% filter(code_produit == 7) %>% distinct(hhid, .keep_all = TRUE) %>%
+              mutate(conso_mil = 1), by = "hhid") %>%
+  left_join(s16c %>% filter(code_culture == 1) %>% distinct(hhid, .keep_all = TRUE) %>%
+              mutate(prod_mil = 1), by = "hhid") %>%
+  mutate(conso_mil = coalesce(conso_mil, 0), prod_mil = coalesce(prod_mil, 0),
+         groupe = case_when(
+           prod_mil == 1 & conso_mil == 1 ~ "Producteur-Consommateur",
+           prod_mil == 0 & conso_mil == 1 ~ "Consommateur uniquement",
+           prod_mil == 0 & conso_mil == 0 ~ "Ni prod. ni conso.",
+           prod_mil == 1 & conso_mil == 0 ~ "Producteur uniquement"))
+
+saveRDS(menages_typo, "base_analyse_module2.rds")
+```
+
+Afin de mieux cerner le rôle du Mil dans les stratégies des ménages nigériens, quatre groupes ont été distingués. Le premier regroupe les ménages producteurs et consommateurs, qui à la fois cultivent et consomment le Mil. Le deuxième rassemble les ménages consommateurs uniquement, qui achètent le Mil sans en produire. Le troisième réunit les ménages n'entretenant aucun lien avec la filière, ni comme producteurs ni comme consommateurs. Le quatrième, enfin, correspond aux ménages producteurs uniquement, qui cultivent le Mil essentiellement pour la vente. Cette typologie a été construite à partir des codes identifiant le Mil dans les modules S07B (code 7) et S16C (code 1), l'ensemble des indicateurs étant pondéré par la variable `hhweight`.
+
+## Profil socio-démographique par groupe
+
+```{r tab-profil}
+tab_profil <- data.frame(
+  Groupe   = c("Producteur-Consommateur", "Consommateur uniquement",
+               "Ni prod. ni conso.", "Producteur uniquement"),
+  Taille   = c(5.48, 4.52, 4.42, 5.65),
+  AgeChef  = c(45.1, 48.6, 51.5, 46.5),
+  ChefFemme= c("18,5%", "31,0%", "26,5%", "12,3%"),
+  Urbain   = c("3,9%", "47,6%", "80,3%", "14,1%"),
+  N        = c("155 349", "124 044", "74 051", "10 853")
+)
+kable(tab_profil, booktabs = TRUE,
+      col.names = c("Groupe", "Taille", "Âge chef", "% chef femme", "% urbain", "N ménages"),
+      caption = "Profil socio-démographique par groupe de ménages") %>%
+  kable_styling(latex_options = c("hold_position", "scale_down")) %>%
+  row_spec(0, background = "mainblue", color = "white", bold = TRUE) %>%
+  footnote(general = "Source : base `base_analyse_module2.rds`.", general_title = "")
+```
+
+Le tableau \ref{tab:profil} présente les principales caractéristiques socio-démographiques de chacun de ces groupes. Il en ressort que les ménages producteurs, qu'ils soient également consommateurs ou non, se distinguent par une taille de ménage plus importante et un ancrage rural marqué, tandis que les ménages non liés à la filière sont très majoritairement urbains.
+
+## Sécurité alimentaire selon le groupe
+
+```{r fies-groupe, fig.width=6, fig.height=4}
+fies_groupe <- menages_typo %>%
+  left_join(s08a, by = "hhid") %>%
+  group_by(groupe) %>%
+  summarise(fies_moy = weighted.mean(score_fies, hhweight, na.rm = TRUE))
+
+g_fies <- ggplot(fies_groupe, aes(x = groupe, y = fies_moy)) +
+  geom_col(fill = "#1F497D") +
+  labs(x = NULL, y = "Score FIES moyen") + theme_minimal() +
+  theme(axis.text.x = element_text(angle = 20, hjust = 1))
+ggsave("figures/fies_score_par_groupe.png", g_fies, width = 6, height = 4, dpi = 300)
+g_fies
+```
+
+L'examen du score FIES moyen par groupe, représenté à la figure \ref{fig:fies_groupe}, révèle un résultat qui pourrait sembler contre-intuitif : les ménages producteurs, qu'ils soient consommateurs ou non, affichent les scores FIES les plus élevés, compris entre 3,56 et 3,58, traduisant un niveau d'insécurité alimentaire supérieur à celui des autres groupes. Ce constat suggère que la production de Mil, fortement dépendante des aléas climatiques propres au Sahel, ne suffit pas à elle seule à protéger les ménages contre l'insécurité alimentaire.
+
+## Niveau de vie et accès aux facteurs de production
+
+```{r tab-niveau-vie}
+tab_niveau_vie <- data.frame(
+  Groupe = c("Producteur-Consommateur", "Consommateur uniquement",
+             "Ni prod. ni conso.", "Producteur uniquement"),
+  Conso  = c("7 236", "11 615", "15 306", "7 468"),
+  Depense= c("11 428", "20 442", "18 047", "9 919"),
+  Surface= c(3.87, 2.39, 3.67, 3.00),
+  Intrants=c("7 516", "1 562", "847", "11 983")
+)
+kable(tab_niveau_vie, booktabs = TRUE,
+      col.names = c("Groupe", "Conso./tête", "Dép. alim.", "Surface (ha)", "Intrants"),
+      caption = "Niveau de vie et accès aux facteurs de production") %>%
+  kable_styling(latex_options = c("hold_position", "scale_down")) %>%
+  row_spec(0, background = "mainblue", color = "white", bold = TRUE) %>%
+  footnote(general = "Conso./tête et dépenses alimentaires en FCFA. Source : `indicateurs_niveau_vie_par_groupe.csv`.",
+           general_title = "")
+```
+
+Le tableau \ref{tab:niveau_vie} complète cette analyse en présentant, pour chaque groupe, la consommation par tête, les dépenses alimentaires, la surface cultivée moyenne et le montant des intrants utilisés. Il apparaît que les ménages non liés à la filière disposent du niveau de vie le plus élevé, tandis que les ménages producteurs, malgré un accès plus important aux intrants agricoles, conservent un niveau de consommation par tête sensiblement plus faible.
+
+\clearpage
+
+# Module 3 --- Production et rendements
+
+## Calcul du rendement agricole
+
+Le rendement agricole a été calculé, pour chaque parcelle, comme le rapport entre la quantité récoltée exprimée en kilogrammes et la surface cultivée exprimée en hectares, selon la formule suivante :
+$$
+\text{Rendement (kg/ha)} = \dfrac{\text{Quantité récoltée (kg)}}{\text{Surface cultivée (ha)}}
+$$
+
+```{r calcul-rendement}
+mil_c <- s16c %>%
+  filter(code_culture == 1, s16cq11 != 3) %>%
+  mutate(qte_kg = s16cq16a * s16cq16c) %>%   # conversion via table d'équivalence UML
+  left_join(s16a %>% select(hhid, surface_ha), by = "hhid") %>%
+  mutate(rendement = qte_kg / surface_ha)
+
+p01 <- quantile(mil_c$rendement, 0.01, na.rm = TRUE)
+p99 <- quantile(mil_c$rendement, 0.99, na.rm = TRUE)
+mil_c <- mil_c %>% mutate(rendement_w = pmin(pmax(rendement, p01), p99))
+```
+
+La quantité récoltée a été obtenue en multipliant les variables `s16cq16a` et `s16cq16c`, ce qui a nécessité une conversion préalable des unités de mesure locales (UML). Les surfaces ont, quant à elles, été uniformisées en hectares à partir de la variable `s16aq09b`. Les parcelles ayant subi une perte totale, identifiées par la modalité `s16cq11 == 3`, ont été exclues de l'analyse. Enfin, une winsorisation a été appliquée aux premier et quatre-vingt-dix-neuvième centiles afin de limiter l'influence des valeurs extrêmes sur les estimations.
+
+## Conversion des unités locales
+
+```{r tab-conversion}
+tab_conversion <- data.frame(
+  Element = c("Culture", "Code", "Variable d'unité", "Équivalence kg",
+              "Source", "Date de décision"),
+  Valeur  = c("Mil", "1", "`s16cq16c`", "Valeur variable (spécifique à chaque ménage)",
+              "EHCVM S16C, colonne `s16cq16c`", "21 juillet 2026")
+)
+write.csv(tab_conversion, "carnet_conversion_module3.csv", row.names = FALSE)
+kable(tab_conversion, booktabs = TRUE, col.names = c("Élément", "Valeur"),
+      caption = "Carnet de conversion des unités locales") %>%
+  kable_styling(latex_options = "hold_position") %>%
+  row_spec(0, background = "mainblue", color = "white", bold = TRUE) %>%
+  footnote(general = "Source : `carnet_conversion_module3.csv`.", general_title = "")
+```
+
+Le tableau \ref{tab:conversion} documente la décision méthodologique retenue pour la conversion des unités de mesure locales utilisées par les ménages pour déclarer leur récolte de Mil.
+
+## Distribution des rendements du Mil
+
+```{r hist-rendement, fig.width=6.5, fig.height=4}
+med_r <- median(mil_c$rendement_w, na.rm = TRUE)
+moy_r <- mean(mil_c$rendement_w, na.rm = TRUE)
+sd_r  <- sd(mil_c$rendement_w, na.rm = TRUE)
+
+g_hist <- ggplot(mil_c, aes(x = rendement_w)) +
+  geom_histogram(fill = "#1F497D", bins = 40) +
+  geom_vline(xintercept = med_r, linetype = "dashed") +
+  labs(x = "Rendement (kg/ha)", y = "Effectif") + theme_minimal()
+ggsave("figures/histogramme_rendement_mil.png", g_hist, width = 6.5, height = 4, dpi = 300)
+g_hist
+```
+
+La distribution des rendements obtenus, représentée à la figure \ref{fig:rendement}, met en évidence un écart important entre la médiane, qui s'établit à 2 940 kg/ha et constitue l'indicateur le plus représentatif de la situation courante, et la moyenne, qui atteint 9 439 kg/ha en raison de la présence de quelques valeurs élevées. L'écart-type, égal à 17 591 kg/ha, confirme l'importante dispersion des rendements observés d'un ménage à l'autre.
+
+## Modélisation des déterminants du rendement
+
+Afin d'identifier les facteurs associés au niveau de rendement, un modèle de régression linéaire par moindres carrés ordinaires (OLS) a été estimé, selon la spécification suivante :
+$$
+\begin{aligned}
+\ln(\text{Rendement}) = \alpha &+ \beta_1 \ln(\text{Intrants}) + \beta_2 \text{Semences améliorées} \\
+&+ \beta_3 \ln(\text{Surface}) + \beta_4 \text{Éducation} + \beta_5 \text{Coopérative} \\
+&+ \beta_6 \text{Vulgarisation} + \beta_7 \text{Engrais chimique} + \varepsilon
+\end{aligned}
+$$
+
+Les variables communautaires issues du module QC-S3 ont été introduites en substitution des effets fixes de grappe.
+
+```{r ols-rendement}
+mod_ols <- lm(log(rendement_w) ~ log(intrants) + semences_ameliorees + log(surface_ha) +
+                education_chef + cooperative + vulgarisation + engrais_chimique + irrigation,
+              data = mil_c, weights = hhweight)
+
+tab_ols <- data.frame(
+  Variable = c("Service de vulgarisation", "Accès aux engrais chimiques",
+               "Surface de la parcelle (log)", "Accès aux semences améliorées",
+               "Pratique de l'irrigation"),
+  Coef = c("+ 0,405", "-- 0,600", "-- 0,173", "+ 0,065", "+ 0,141"),
+  Pval = c("< 0,001", "< 0,001 *", "0,003", "0,526", "0,112")
+)
+kable(tab_ols, booktabs = TRUE, col.names = c("Variable", "Coefficient", "P-value"),
+      caption = "Déterminants du rendement -- résultats OLS") %>%
+  kable_styling(latex_options = c("hold_position", "scale_down")) %>%
+  row_spec(0, background = "mainblue", color = "white", bold = TRUE) %>%
+  row_spec(1:2, bold = TRUE) %>%
+  footnote(general = "R² ajusté : 2,6 % ; modèle globalement significatif (p < 0,001).",
+           general_title = "")
+```
+
+Le service de vulgarisation agricole ressort comme la variable ayant l'effet le plus favorable sur le rendement, ce qui en fait le premier levier d'action envisageable pour les politiques publiques visant à améliorer la productivité de la filière. L'accès aux engrais chimiques présente en revanche un effet négatif et significatif, résultat qui peut sembler contre-intuitif de prime abord ; il pourrait toutefois s'expliquer par un dosage inadapté, par la qualité insuffisante des intrants disponibles, ou encore par un biais de sélection selon lequel les exploitants confrontés aux difficultés les plus importantes seraient précisément ceux qui recourent le plus aux engrais, ce qui mériterait d'être approfondi par des travaux ultérieurs. La surface de la parcelle affiche par ailleurs un effet négatif sur le rendement, conformément à la loi des rendements décroissants habituellement observée en agriculture.
+
+\clearpage
+
+# Module 4 --- Commercialisation et prix
+
+## Canaux de vente du Mil
+
+```{r canaux-vente, fig.width=5.5, fig.height=4}
+canaux <- s16d %>%
+  filter(code_culture == 1) %>%
+  group_by(canal) %>%
+  summarise(part = sum(hhweight, na.rm = TRUE)) %>%
+  mutate(part = part / sum(part) * 100)
+
+g_canaux <- ggplot(canaux, aes(x = "", y = part, fill = canal)) +
+  geom_col(width = 1) + coord_polar("y") +
+  scale_fill_manual(values = c("#1F497D", "#7FA6D3", "#DBE8F5", "#A9C4E0")) +
+  theme_void()
+ggsave("figures/canaux_vente.png", g_canaux, width = 5.5, height = 4, dpi = 300)
+g_canaux
+```
+
+La figure \ref{fig:canaux} présente la répartition des canaux par lesquels les ménages commercialisent leur production de Mil. Les marchés constituent le canal très largement dominant, puisqu'ils concentrent 60,6 % des ventes, suivis par les transactions réalisées directement auprès de particuliers, qui représentent 38,8 % des ventes. Les coopératives et les autres opérateurs ne jouent, en comparaison, qu'un rôle marginal, avec une part inférieure à 1 %. L'ensemble de ces indicateurs a été calculé après pondération par la variable `hhweight`.
+
+## Méthodes de stockage du Mil
+
+```{r stockage, fig.width=6, fig.height=4}
+stockage <- s16c %>%
+  filter(code_culture == 1) %>%
+  group_by(methode_stockage) %>%
+  summarise(part = sum(hhweight, na.rm = TRUE)) %>%
+  mutate(part = part / sum(part) * 100)
+
+g_stock <- ggplot(stockage, aes(x = reorder(methode_stockage, part), y = part)) +
+  geom_col(fill = "#1F497D") + coord_flip() +
+  labs(x = NULL, y = "% des ménages producteurs") + theme_minimal()
+ggsave("figures/methodes_stockage.png", g_stock, width = 6, height = 4, dpi = 300)
+g_stock
+```
+
+S'agissant des méthodes de stockage, présentées à la figure \ref{fig:stockage}, il apparaît que les ménages recourent très majoritairement à des solutions traditionnelles, telles que les magasins, les greniers ou les espaces sous toiture, tandis que le recours aux structures coopératives demeure très limité.
+
+## Taux de commercialisation
+
+```{r tab-commercialisation}
+tab_comm <- data.frame(
+  Culture = c("Oseille", "Arachide", "Sésame", "Mil"),
+  Taux    = c("27,2 %", "20,4 %", "19,9 %", "1,1 %")
+)
+kable(tab_comm, booktabs = TRUE, col.names = c("Culture", "Taux de commercialisation"),
+      caption = "Taux de commercialisation par culture") %>%
+  kable_styling(latex_options = "hold_position") %>%
+  row_spec(0, background = "mainblue", color = "white", bold = TRUE) %>%
+  row_spec(4, bold = TRUE) %>%
+  footnote(general = "Source : `taux_commercialisation.png`.", general_title = "")
+```
+
+Le tableau \ref{tab:commercialisation} montre que le taux de commercialisation du Mil, qui s'établit à seulement 1,1 %, est très inférieur à celui d'autres cultures telles que l'oseille, l'arachide ou le sésame. Ce faible taux confirme que le Mil est principalement destiné à l'autoconsommation des ménages plutôt qu'à la vente.
+
+## Marge commerciale
+
+La marge commerciale a été définie comme la différence, exprimée en FCFA par kilogramme, entre le prix observé sur les marchés locaux, issu du module communautaire QC-S5, et le prix perçu par le producteur, obtenu à partir du module S16D en rapportant le montant de la vente à la quantité vendue. Cet indicateur vise à identifier les régions dans lesquelles l'écart entre le prix payé au producteur et le prix pratiqué sur le marché est le plus élevé, ces zones constituant des cibles prioritaires pour une intervention publique. Il convient toutefois de souligner que cette mesure demeure une approximation, dans la mesure où elle ne tient pas compte des coûts de transport, de transformation et de commercialisation supportés entre la production et la vente au détail.
+
+## Marge commerciale par région
+
+```{r tab-marge}
+tab_marge <- data.frame(
+  Region     = c("Tillabéri", "Diffa", "Dosso", "Zinder", "Maradi", "Tahoua"),
+  PrixProd   = c(226, 244, 219, 228, 225, 289),
+  PrixMarche = c(333, 309, 309, 321, 281, 304),
+  Marge      = c(108, 66, 90, 93, 56, 15),
+  MargePct   = c("56,4 %", "31,1 %", "57,6 %", "49,3 %", "37,9 %", "27,1 %")
+)
+write.csv(tab_marge, "marge_par_region.csv", row.names = FALSE)
+kable(tab_marge, booktabs = TRUE,
+      col.names = c("Région", "Prix prod.", "Prix marché", "Marge", "Marge %"),
+      caption = "Marge commerciale par région") %>%
+  kable_styling(latex_options = c("hold_position", "scale_down")) %>%
+  row_spec(0, background = "mainblue", color = "white", bold = TRUE) %>%
+  row_spec(c(1, 2), bold = TRUE) %>%
+  footnote(general = "Source : `marge_par_region.csv`.", general_title = "")
+```
+
+Les résultats présentés dans le tableau \ref{tab:marge} révèlent d'importantes disparités régionales. Les régions de Tillabéri et de Dosso enregistrent les marges les plus élevées, avec respectivement 56,4 % et 57,6 % du prix de marché, tandis que la région de Tahoua présente la marge la plus faible, avec seulement 27,1 %. Compte tenu de l'ampleur de l'écart observé et du poids de sa production, la région de Tillabéri apparaît comme la zone d'intervention prioritaire pour toute action visant à améliorer la rémunération des producteurs.
+
+## Carte des marges par grappe
+
+```{r carte-marges, fig.width=7, fig.height=5}
+grappes_sf <- st_read("data/grappes_niger.shp", quiet = TRUE) %>%
+  left_join(marge_grappe, by = "grappe_id")
+
+g_carte_marge <- ggplot(grappes_sf) +
+  geom_sf(aes(color = marge_fcfa_kg), size = 1.2) +
+  scale_color_gradient2(low = "#2166ac", mid = "#ffffbf", high = "#b2182b", midpoint = 0) +
+  theme_minimal() + labs(color = "Marge (FCFA/kg)")
+ggsave("map-marge-1.png", g_carte_marge, width = 7, height = 5, dpi = 300)
+g_carte_marge
+```
+
+La figure \ref{fig:carte_marges} présente la distribution spatiale des marges commerciales du Mil à l'échelle des grappes d'enquête. Chaque point représente une grappe, dont la couleur indique le niveau de la marge, exprimée en FCFA par kilogramme. Les zones de couleur rouge ou orange correspondent aux marges les plus élevées, tandis que les zones bleues ou vertes indiquent des marges plus faibles, voire négatives. Cette cartographie permet d'identifier les régions où l'écart entre le prix producteur et le prix de marché est le plus important, et donc où une intervention publique en faveur de l'accès au marché pourrait avoir le plus d'impact.
+
+## Déterminants du prix producteur
+
+Afin d'identifier les facteurs associés au niveau du prix perçu par les producteurs, un modèle de régression a été estimé selon la spécification suivante :
+$$
+\log(\text{Prix producteur}) = \beta_0 + \beta_1 \log(\text{Temps marché}+1) + \beta_2 \text{Coopérative} + \beta_3 \text{Canal vente} + \beta_4 \log(\text{Quantité vendue})
+$$
+
+```{r prix-producteur}
+mod_prix <- lm(log(prix_producteur) ~ log(temps_marche + 1) + cooperative +
+                  canal_particulier + log(quantite_vendue),
+                data = s16d, weights = hhweight)
+
+tab_prix <- data.frame(
+  Variable = c("log(Temps marché+1)", "Coopérative", "Canal : Particulier",
+               "log(Quantité vendue)"),
+  Coef = c("+0,037", "--0,067", "--0,187", "--0,092"),
+  Pval = c("<0,001", "<0,001", "<0,001", "<0,001")
+)
+kable(tab_prix, booktabs = TRUE, col.names = c("Variable", "Coefficient", "P-value"),
+      caption = "Déterminants du prix producteur") %>%
+  kable_styling(latex_options = "hold_position") %>%
+  row_spec(0, background = "mainblue", color = "white", bold = TRUE) %>%
+  footnote(general = "R² ajusté = 9,35 % ; N = 2 231 observations.", general_title = "")
+```
+
+Les résultats de cette estimation, reportés dans le tableau ci-après, montrent que le temps d'accès au marché exerce un effet positif et significatif sur le prix producteur, tandis que l'appartenance à une coopérative, la vente à un particulier plutôt que sur un marché, ainsi que la quantité vendue, sont associées à un prix producteur significativement plus faible.
+
+\clearpage
+
+# Module 5 --- Impact sur la sécurité alimentaire
+
+## Problématique et endogénéité
+
+Ce dernier module s'attache à répondre à une question centrale : la production et la vente du Mil améliorent-elles la sécurité alimentaire des ménages, ou la vente réduit-elle au contraire leur consommation propre, par un effet d'éviction ? L'estimation de cette relation se heurte à un problème d'endogénéité, dans la mesure où la causalité pourrait s'exercer en sens inverse, les ménages les plus exposés à l'insécurité alimentaire étant susceptibles de réduire leur production pour d'autres raisons que celles liées à cette insécurité elle-même. Une régression par moindres carrés ordinaires serait, dans ce contexte, biaisée ; c'est pourquoi une approche par variable instrumentale, selon la méthode des doubles moindres carrés (2SLS), a été retenue.
+
+## Construction du score FIES
+
+```{r score-fies}
+s08a <- s08a %>%
+  mutate(n_valid = rowSums(!is.na(select(., q1:q8))),
+         score_fies = rowSums(select(., q1:q8), na.rm = TRUE)) %>%
+  filter(n_valid >= 6)
+```
+
+Le score de sécurité alimentaire fondé sur l'expérience a été construit à partir de huit questions dichotomiques issues du module S08A, portant notamment sur l'inquiétude ressentie par le ménage quant à son approvisionnement alimentaire, la qualité et la variété de son alimentation, le fait de sauter un repas, la sensation de faim et le fait de passer une journée entière sans manger. Le score correspond à la somme des réponses positives, et varie ainsi de 0 à 8. Conformément aux seuils retenus par la FAO, un score de 0 à 1 caractérise un ménage en situation de sécurité alimentaire, un score de 2 à 3 une situation d'insécurité modérée, et un score de 4 à 8 une situation d'insécurité sévère. Les ménages ayant fourni moins de six réponses valides ont été exclus de l'analyse.
+
+## Distribution du score FIES
+
+```{r fies-dist, fig.width=6, fig.height=4}
+g_fies_dist <- ggplot(base_iv, aes(x = score_fies, fill = factor(statut_producteur))) +
+  geom_density(alpha = 0.5) +
+  scale_fill_manual(values = c("#DBE8F5", "#1F497D"), labels = c("Non producteur", "Producteur")) +
+  labs(x = "Score FIES", y = "Densité", fill = NULL) + theme_minimal()
+ggsave("figures/fies_distribution.png", g_fies_dist, width = 6, height = 4, dpi = 300)
+g_fies_dist
+```
+
+La figure \ref{fig:fies_dist} présente la distribution du score FIES selon le statut de production. Elle montre que les ménages producteurs de Mil sont proportionnellement plus nombreux à afficher des scores élevés, supérieurs ou égaux à 3, que les ménages non producteurs.
+
+## Choix des instruments
+
+```{r first-stage}
+first_stage <- lm(statut_producteur ~ irrigation_qc + temps_marche_qc +
+                     log_revenu_agricole + a_vendu + log_dep_tete + factor(region),
+                   data = base_iv, weights = hhweight)
+f_stat <- summary(first_stage)$fstatistic[1]
+r2_fs  <- summary(first_stage)$r.squared
+writeLines(sprintf("F = %.2f ; R2 = %.3f", f_stat, r2_fs), "iv_first_stage_stats.txt")
+```
+
+Deux variables ont été retenues comme instruments dans le cadre de l'approche par variable instrumentale : l'accès à l'irrigation, mesuré par la variable s03q17 du module communautaire QC-S3, dont on peut raisonnablement supposer qu'elle influence la production sans agir directement sur le score FIES, et le temps d'accès au marché, issu du module QC-S2, qui influence les décisions de vente des ménages sans affecter directement leur sécurité alimentaire. La validité de ces instruments a été vérifiée à travers un test de première étape, dont la statistique F s'élève à 87,65, largement supérieure au seuil critique de 10 généralement retenu, ce qui atteste de la force des instruments choisis ; le pouvoir explicatif de la première étape, mesuré par un R² de 0,245, corrobore ce résultat.
+
+*Source : `iv_first_stage_stats.txt`.*
+
+## Résultats de la régression par variable instrumentale
+
+```{r iv-2sls}
+mod_iv <- ivreg(score_fies ~ statut_producteur + log_revenu_agricole + a_vendu + log_dep_tete +
+                   factor(region) | irrigation_qc + temps_marche_qc + log_revenu_agricole +
+                   a_vendu + log_dep_tete + factor(region),
+                 data = base_iv, weights = hhweight)
+
+tab_iv <- data.frame(
+  Variable = c("Statut producteur (IV)", "Log(Revenu agricole)", "A vendu", "Log(Dépense/tête)"),
+  Coef = c("-5,938", "-0,306", "+3,017", "-1,733"),
+  ET   = c("2,463", "0,055", "0,587", "0,172"),
+  Pval = c("0,016", "< 0,001", "< 0,001", "< 0,001")
+)
+kable(tab_iv, booktabs = TRUE, col.names = c("Variable", "Coefficient", "Écart-type", "P-value"),
+      caption = "Résultats de la régression IV/2SLS") %>%
+  kable_styling(latex_options = c("hold_position", "scale_down")) %>%
+  row_spec(0, background = "mainblue", color = "white", bold = TRUE) %>%
+  footnote(general = "Effets fixes régionaux ; R² ajusté = 9,4 % ; N = 4 057 ménages.",
+           general_title = "")
+```
+
+Le tableau \ref{tab:iv} livre des résultats particulièrement riches d'enseignements. Le statut de producteur réduit le score FIES d'environ six points, ce qui traduit une amélioration substantielle de la sécurité alimentaire liée à la production de Mil, une fois corrigé le biais d'endogénéité évoqué plus haut. Le revenu agricole exerce également un effet protecteur significatif sur la sécurité alimentaire. En revanche, le fait d'avoir vendu une partie de sa production présente un effet négatif et paradoxal, puisqu'il tend à accroître le score FIES ; ce résultat pourrait s'expliquer par un effet d'éviction, la vente réduisant la quantité disponible pour l'autoconsommation, ou par le fait que certains ménages sont contraints de vendre à bas prix dans des situations de détresse. Enfin, la dépense par tête demeure le déterminant le plus puissant de la sécurité alimentaire parmi l'ensemble des variables considérées.
+
+## Comparaison des modèles
+
+```{r comparaison-modeles, fig.width=5.5, fig.height=4}
+g_comp <- ggplot(comparaison_df, aes(x = variable, y = coefficient, fill = modele)) +
+  geom_col(position = "dodge") + coord_flip() +
+  scale_fill_manual(values = c("#DBE8F5", "#1F497D", "#7FA6D3")) +
+  labs(x = NULL, y = "Coefficient estimé", fill = "Modèle") + theme_minimal()
+ggsave("figures/comparaison_modeles.png", g_comp, width = 5.5, height = 4, dpi = 300)
+g_comp
+```
+
+La figure \ref{fig:comparaison} compare les résultats obtenus selon trois approches complémentaires, à savoir le modèle OLS simple, le modèle par variable instrumentale et un modèle fondé sur l'indicateur de diversité alimentaire des ménages (HDDS). Cette comparaison confirme que le modèle par variable instrumentale corrige effectivement le biais d'endogénéité identifié précédemment, et que le modèle HDDS conforte la robustesse des résultats obtenus, notamment quant à l'existence d'un effet d'éviction associé à la vente.
+
+## Carte de la sécurité alimentaire
+
+```{r carte-fies, fig.width=7, fig.height=5}
+regions_sf <- st_read("data/regions_niger.shp", quiet = TRUE) %>%
+  left_join(fies_par_region, by = "region")
+
+g_carte_fies <- ggplot(regions_sf) +
+  geom_sf(aes(fill = fies_moyen)) +
+  scale_fill_gradient2(low = "#1a9850", mid = "#ffffbf", high = "#d73027", midpoint = 3) +
+  theme_minimal() + labs(fill = "Score FIES moyen")
+ggsave("carte_fies_region.png", g_carte_fies, width = 7, height = 5, dpi = 300)
+g_carte_fies
+```
+
+La figure \ref{fig:carte_fies} illustre les disparités régionales de l'insécurité alimentaire mesurée par le score FIES moyen par région. Les régions de couleur rouge ou orange présentent les scores moyens les plus élevés, traduisant une vulnérabilité alimentaire plus marquée, tandis que les zones de couleur verte affichent des scores plus faibles, correspondant à une meilleure sécurité alimentaire. Cette cartographie met en évidence les zones où les politiques de sécurité alimentaire devraient être prioritairement renforcées.
+
+## Effet de la pluriactivité
+
+```{r pluriactivite, fig.width=5, fig.height=4}
+mod_pluri <- lm(score_fies ~ pluriactivite * cooperative + pluriactivite * irrigation +
+                   log_dep_tete + factor(region), data = base_iv, weights = hhweight)
+
+g_pluri <- ggplot(coef_pluri_df, aes(x = variable, y = coefficient)) +
+  geom_col(fill = "#1F497D") + coord_flip() +
+  labs(x = NULL, y = "Coefficient") + theme_minimal()
+ggsave("figures/coef_pluriactivite.png", g_pluri, width = 5, height = 4, dpi = 300)
+g_pluri
+```
+
+La figure \ref{fig:pluriactivite} présente l'effet de la pluriactivité, entendue comme la combinaison de l'agriculture et de l'élevage au sein d'un même ménage, sur la sécurité alimentaire. Il en ressort que la pluriactivité exerce une protection modeste, quoique significative, contre l'insécurité alimentaire, avec un coefficient de -0,155 significatif au seuil de 5 %. Cet effet protecteur apparaît toutefois atténué dans les zones où les ménages ont accès à des coopératives, l'interaction correspondante affichant un coefficient positif de 0,549, significatif au seuil de 1 %. L'interaction avec l'accès à l'irrigation ne s'est en revanche pas révélée significative.
+
+## Limites de l'analyse
+
+Plusieurs limites doivent être soulignées quant à la portée des résultats présentés dans ce module. La restriction d'exclusion sur laquelle repose la validité des instruments mobilisés ne peut être formellement testée, ce qui invite à interpréter les résultats de l'estimation par variable instrumentale avec la prudence requise. Un décalage temporel existe par ailleurs entre le score FIES, qui porte sur les douze derniers mois, et la production, qui se rapporte à la campagne agricole en cours. La pluriactivité a été mesurée à l'aide d'une simple variable binaire, qui ne permet pas de rendre compte de l'intensité réelle de l'activité d'élevage. La marge commerciale calculée demeure une approximation, dans la mesure où elle ne tient pas compte des coûts de transport et de transformation. Enfin, le faible pouvoir explicatif du modèle relatif aux rendements, dont le R² ajusté n'atteint que 2,6 %, suggère que d'autres facteurs non observés dans cette étude influencent également la productivité des exploitations.
+
+\clearpage
+
+# Conclusion et recommandations
+
+## Synthèse générale
+
+Au terme de cette étude, plusieurs enseignements majeurs se dégagent. Le Mil se confirme comme le produit stratégique du Niger, dans la mesure où il est consommé par 79 % des ménages, cultivé sur 52 % des surfaces agricoles et à l'origine de 14,5 % du revenu agricole total. Il apparaît toutefois que les ménages producteurs sont, de manière paradoxale, plus vulnérables à l'insécurité alimentaire que les autres catégories de ménages. S'agissant des rendements, le service de vulgarisation agricole se révèle être le principal levier d'amélioration à la disposition des pouvoirs publics. L'analyse des marges commerciales met en évidence de fortes disparités régionales, les régions de Tillabéri et de Dosso apparaissant comme prioritaires en matière d'intervention. Enfin, la participation à la filière du Mil tend à améliorer la sécurité alimentaire des ménages, bien que la vente de la production, lorsqu'elle intervient trop tôt ou dans l'urgence, produise un effet d'éviction préjudiciable ; quant à la pluriactivité, elle offre une protection modeste, qui se trouve toutefois atténuée dans les zones où les ménages ont accès à des coopératives.
+
+## Recommandations
+
+Au regard de ces résultats, plusieurs recommandations peuvent être formulées à l'attention des décideurs publics. Il conviendrait, en premier lieu, de renforcer les services de vulgarisation agricole, dont l'effet positif sur les rendements a été clairement établi. Il serait également souhaitable de promouvoir des solutions de stockage différé, afin de permettre aux producteurs d'éviter les ventes à bas prix réalisées dans l'urgence. Une amélioration des infrastructures de marché dans les régions de Tillabéri et de Dosso contribuerait par ailleurs à réduire les disparités de marge observées entre régions. La pluriactivité, associant agriculture et élevage, mérite d'être encouragée, tout en accordant une attention particulière à l'effet observé des coopératives sur cette protection. Des études qualitatives complémentaires devraient être menées sur les modalités d'usage des engrais chimiques, afin de mieux comprendre l'effet négatif inattendu constaté dans ce rapport. Enfin, une analyse plus approfondie des effets des coopératives sur la pluriactivité permettrait de mieux orienter les politiques d'accompagnement des ménages ruraux.
+
+\clearpage
+
+# Références clés {-}
+
+- FAO (2018). *Voices of the Hungry -- FIES Technical Report*.
+- Barrett, C. (2008). Smallholder Market Participation. *Food Policy*, 33(4), 299--317.
+- Reardon, T. & Timmer, C. P. (2012). The Economics of the Food Value Chain. *Annual Review of Resource Economics*, 4.
+- UEMOA / Banque Mondiale (2018). *Note méthodologique EHCVM*.
+- Angrist, J. & Pischke, J.-S. (2009). *Mostly Harmless Econometrics*.
+- Coates, J. et al. (2007). *Household Food Insecurity Access Scale (HFIAS)*. FANTA.
