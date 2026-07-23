@@ -1,248 +1,407 @@
 # =============================================================================
-# MODULE 4 : Analyse de la commercialisation, des prix et cartographie
-# (Version avec jointure par REGION pour les prix communautaires - pas de clé grappe disponible)
-# EHCVM Niger 2021 - Projet filière Mil
+# MODULE 5 : Impact de la filière du Mil sur la sécurité alimentaire
+# Version corrigée v2 — corrections : construction HDDS, IV complet,
+# colinéarité pluriactif/producteur, hgender, diagnostics instruments,
+# graphique pluriactivité
 # =============================================================================
 
-# ---- 1. Chargement des données (déjà fait dans 00_load_data.R) ----
-if (!exists("b16")) source("00_load_data.R")
-
+# 1. CHARGEMENT DES BIBLIOTHÈQUES
+# -------------------------------------------------------------------------
+library(haven)
+library(here)
 library(dplyr)
 library(ggplot2)
-library(scales)
-library(forcats)
-library(haven)
 library(tidyr)
+library(broom)
+library(scales)
+# NOTE : alias() (détection de colinéarité parfaite) vient du package
+# 'stats' (base R, toujours disponible) et non de 'car'. On l'appelle
+# explicitement via stats::alias() plus bas, aucun package supplémentaire
+# n'est donc requis pour cette partie.
 
-cat("\n=== MODULE 4 : Commercialisation et Prix ===\n")
+# 2. CHARGEMENT DES BASES
+s08 <- read_dta(here("data", "s08a_me_ner2021.dta"))
+b4  <- read_dta(here("data", "s07b_me_ner2021.dta"))
+b16 <- read_dta(here("data", "s16d_me_ner2021.dta"))
+b6  <- read_dta(here("data", "s16c_me_ner2021.dta"))
+s17 <- read_dta(here("data", "s17_me_ner2021.dta"))
+qc_s2 <- read_dta(here("data", "s02_co_ner2021.dta"))
+qc_s3 <- read_dta(here("data", "s03_co_ner2021.dta"))
+welfare <- read_dta(here("data", "ehcvm_welfare_ner2021.dta"))
 
-# ---- 2. Nettoyage des données de commercialisation (S16D) ----
-b16_clean <- b16 %>%
+# Codes produits
+CODE_MIL_CONSO <- 7   # dans S07B
+CODE_MIL_PROD  <- 1   # dans S16C et S16D
+
+
+# 3. Construction du score FIES (Section S08) 
+fies <- s08 %>%
+  mutate(across(c(s08aq01, s08aq02, s08aq03, s08aq04,
+                  s08aq05, s08aq06, s08aq07, s08aq08),
+                ~ case_when(
+                  as.numeric(.) == 1 ~ 1L,
+                  as.numeric(.) == 2 ~ 0L,
+                  TRUE ~ NA_integer_
+                ),
+                .names = "fies_{.col}")) %>%
+  rowwise() %>%
   mutate(
-    qte_vendue_kg = as.numeric(s16dq05c),
-    montant_vente = as.numeric(s16dq06),
-    prix_prod_kg = if_else(qte_vendue_kg > 0 & !is.na(qte_vendue_kg) & qte_vendue_kg > 0,
-                           montant_vente / qte_vendue_kg, NA_real_),
-    culture_code = as.numeric(s16dq01),
-    acheteur = as_factor(s16dq08),
-    stockage = as_factor(s16dq11),
-    but_stock = as_factor(s16dq14)
+    score_fies = sum(c_across(starts_with("fies_")), na.rm = TRUE),
+    n_reponses = sum(!is.na(c_across(starts_with("fies_"))))
   ) %>%
-  filter(!is.na(qte_vendue_kg) & qte_vendue_kg > 0 & 
-           !is.na(montant_vente) & montant_vente > 0 &
-           !is.na(prix_prod_kg) & prix_prod_kg > 0) %>%
-  # Joindre les poids, région et coordonnées GPS
-  left_join(welfare %>% select(grappe, menage, hhweight, region), by = c("grappe", "menage")) %>%
-  left_join(s00 %>% select(grappe, menage, lat, lon), by = c("grappe", "menage")) %>%
-  # Harmoniser region en texte pour permettre des jointures futures cohérentes
-  mutate(region = trimws(as.character(as_factor(region))))
-# NOTE : si s00 contient encore GPS__Latitude / GPS__Longitude au lieu de lat/lon,
-# utilisez plutôt : left_join(s00 %>% select(grappe, menage, lat = GPS__Latitude, lon = GPS__Longitude), by = c("grappe","menage"))
-
-cat("Nombre de lignes après nettoyage S16D :", nrow(b16_clean), "\n")
-
-# ---- 3. Taux de commercialisation par culture (pondéré) ----
-taux_commer <- b16_clean %>%
-  group_by(culture_code) %>%
-  summarise(
-    nb_producteurs_pond = sum(hhweight, na.rm = TRUE),
-    nb_vendeurs_pond   = sum(hhweight * (qte_vendue_kg > 0), na.rm = TRUE),
-    qte_vendue_pond    = sum(qte_vendue_kg * hhweight, na.rm = TRUE),
-    montant_vente_pond = sum(montant_vente * hhweight, na.rm = TRUE),
-    .groups = "drop"
-  ) %>%
+  ungroup() %>%
+  filter(n_reponses >= 6) %>%
   mutate(
-    taux_commercialisation = round(nb_vendeurs_pond / nb_producteurs_pond * 100, 1),
-    prix_moyen_kg = round(montant_vente_pond / qte_vendue_pond, 0)
+    cat_fies = case_when(
+      score_fies <= 1 ~ "Sécurisé",
+      score_fies <= 3 ~ "Modérément insécurisé",
+      TRUE            ~ "Sévèrement insécurisé"
+    ),
+    cat_fies = factor(cat_fies, levels = c("Sécurisé", "Modérément insécurisé", "Sévèrement insécurisé")),
+    fies_moderee = if_else(score_fies >= 3, 1L, 0L),
+    fies_severe  = if_else(score_fies >= 6, 1L, 0L)
   ) %>%
-  arrange(desc(taux_commercialisation))
+  select(grappe, menage, score_fies, cat_fies, fies_moderee, fies_severe)
 
-cat("\n--- Taux de commercialisation par culture ---\n")
-print(taux_commer)
+cat("Score FIES : moyenne =", mean(fies$score_fies, na.rm = TRUE),
+    ", médiane =", median(fies$score_fies, na.rm = TRUE), "\n")
 
-# ---- 4. Canaux de vente et stockage (graphiques) ----
-dir.create("figures", showWarnings = FALSE)
-
-# Canaux de vente
-canaux <- b16_clean %>%
-  group_by(acheteur) %>%
-  summarise(effectif_pond = sum(hhweight, na.rm = TRUE), .groups = "drop") %>%
-  mutate(pct = round(effectif_pond / sum(effectif_pond) * 100, 1))
-
-p_canaux <- ggplot(canaux, aes(x = fct_reorder(acheteur, effectif_pond), y = effectif_pond, fill = effectif_pond)) +
-  geom_col(show.legend = FALSE) +
-  geom_text(aes(label = paste0(pct, "%")), hjust = -0.1, size = 3.5) +
-  coord_flip() +
-  scale_y_continuous(expand = expansion(mult = c(0, 0.2))) +
-  labs(title = "Canaux de vente (pondéré)", x = NULL, y = "Effectif pondéré") +
-  theme_minimal()
-print(p_canaux)
-ggsave("figures/canaux_vente.png", p_canaux, width = 10, height = 6, dpi = 150)
-
-# Stockage
-stock <- b16_clean %>%
-  group_by(stockage) %>%
-  summarise(effectif_pond = sum(hhweight, na.rm = TRUE), .groups = "drop") %>%
-  mutate(pct = round(effectif_pond / sum(effectif_pond) * 100, 1))
-
-p_stock <- ggplot(stock, aes(x = fct_reorder(stockage, effectif_pond), y = effectif_pond, fill = effectif_pond)) +
-  geom_col(show.legend = FALSE) +
-  geom_text(aes(label = paste0(pct, "%")), hjust = -0.1, size = 3.5) +
-  coord_flip() +
-  scale_y_continuous(expand = expansion(mult = c(0, 0.2))) +
-  labs(title = "Méthodes de stockage (pondéré)", x = NULL, y = "Effectif pondéré") +
-  theme_minimal()
-print(p_stock)
-ggsave("figures/methodes_stockage.png", p_stock, width = 10, height = 6, dpi = 150)
-
-# ---- 5. Prix producteur moyen par culture et région (pondéré) ----
-prix_prod_region <- b16_clean %>%
-  group_by(culture_code, region) %>%
-  summarise(
-    prix_prod_moy = weighted.mean(prix_prod_kg, hhweight, na.rm = TRUE),
-    .groups = "drop"
-  )
-
-# ---- 6. Prix marchés communautaires (prix_communautaire) ----
-# IMPORTANT : prix_communautaire ne partage AUCUNE clé (ni grappe, ni key commune)
-# avec les autres modules chargés. La seule jointure possible ici est par REGION.
-# ⚠️ Adapter le nom de la variable région ci-dessous si ce n'est pas "region"
-# (vérifier avec names(prix_communautaire) - ex: s00q01, codregion, etc.)
-
-prix_marche <- prix_communautaire %>%
-  mutate(
-    codpr = as.numeric(produit__id),
-    region = trimws(as.character(as_factor(region))),   # <-- ADAPTER le nom de variable si nécessaire
-    prix_kg = case_when(
-      as.numeric(unite) == 2   ~ as.numeric(prix1) / as.numeric(quantite1),
-      as.numeric(unite) == 100 ~ as.numeric(prix1) / (as.numeric(quantite1) / 1000),
-      TRUE ~ NA_real_
-    )
-  ) %>%
-  filter(!is.na(prix_kg) & prix_kg > 0) %>%
-  group_by(codpr, region) %>%
-  summarise(
-    prix_marche_moy = mean(prix_kg, na.rm = TRUE),
-    n_obs_marche = n(),
-    .groups = "drop"
-  )
-
-cat("\nNombre de lignes prix_marche (par région) :", nrow(prix_marche), "\n")
-
-# ---- Vérification de cohérence des libellés région avant jointure ----
-cat("\nRégions dans b16_clean  :", paste(sort(unique(b16_clean$region)), collapse = " | "), "\n")
-cat("Régions dans prix_marche :", paste(sort(unique(prix_marche$region)), collapse = " | "), "\n")
-cat("Régions non appariées :", 
-    paste(setdiff(unique(b16_clean$region), unique(prix_marche$region)), collapse = " | "), "\n")
-
-# ---- 7. Correspondance culture_code <-> codpr (pour le mil et autres) ----
-correspondance <- data.frame(
-  culture_code = c(1, 2, 3, 4, 8, 10, 11, 12, 13, 33, 37),
-  codpr        = c(7, 8, 1, 6, 112, 114, 98, 102, 120, 100, 91),
-  label        = c("Mil", "Sorgho", "Riz Paddy", "Maïs", "Niébé", "Arachide",
-                   "Gombo", "Oseille", "Sésame", "Oignon", "Haricot vert")
+#  4. Construction du score HDDS (Section S07B) ----
+groupe_map <- data.frame(
+  code_produit = c(1:20, 27:39, 40:49, 52:60, 61:69, 71:87, 88:111, 112:120, 134:138, 155:166),
+  groupe = c(
+    rep("Céréales", length(1:20)),
+    rep("Viandes", length(27:39)),
+    rep("Poissons", length(40:49)),
+    rep("Lait/Oeufs", length(52:60)),
+    rep("Huiles/Graisses", length(61:69)),
+    rep("Fruits", length(71:87)),
+    rep("Légumes/Tubercules", length(88:111)),
+    rep("Légumineuses", length(112:120)),
+    rep("Sucreries", length(134:138)),
+    rep("Boissons", length(155:166))
+  ),
+  stringsAsFactors = FALSE
 )
 
-# ---- 8. Base des prix par grappe pour le Mil (avec marge, prix marché au niveau région) ----
-prix_par_grappe <- b16_clean %>%
-  filter(culture_code == 1) %>%  # Mil
-  group_by(grappe) %>%
+hdds <- b4 %>%
+  filter(as.numeric(s07bq02) == 1) %>%
+  mutate(code_produit = as.numeric(s07bq01)) %>%
+  left_join(groupe_map, by = "code_produit") %>%
+  filter(!is.na(groupe)) %>%
+  group_by(grappe, menage) %>%
+  summarise(score_hdds = n_distinct(groupe), .groups = "drop")
+
+cat("Score HDDS : moyenne =", mean(hdds$score_hdds, na.rm = TRUE),
+    ", médiane =", median(hdds$score_hdds, na.rm = TRUE), "\n")
+
+#  5. Variables de participation à la filière du Mil 
+producteur_mil <- b6 %>%
+  filter(!is.na(vague) & as.numeric(s16cq04) == CODE_MIL_PROD) %>%
+  distinct(grappe, menage) %>%
+  mutate(producteur = 1L)
+
+revenu_vente_mil <- b16 %>%
+  filter(as.numeric(s16dq01) == CODE_MIL_PROD) %>%
+  group_by(grappe, menage) %>%
   summarise(
-    prix_prod_moy = weighted.mean(prix_prod_kg, hhweight, na.rm = TRUE),
-    region = first(region),
-    lat = first(lat),
-    lon = first(lon),
-    n_observations = n(),
+    revenu_agri = sum(as.numeric(s16dq06), na.rm = TRUE),
+    a_vendu = if_else(sum(as.numeric(s16dq05c), na.rm = TRUE) > 0, 1L, 0L),
     .groups = "drop"
-  ) %>%
-  # Jointure par région (chaque grappe hérite du prix de marché moyen de sa région)
-  left_join(
-    prix_marche %>% filter(codpr == 7) %>% select(region, prix_marche_moy),
-    by = "region"
-  ) %>%
+  )
+
+# 6. Élevage et pluriactivité (S17) 
+elevage <- s17 %>%
+  mutate(effectif = as.numeric(s17q03)) %>%
+  group_by(grappe, menage) %>%
+  summarise(a_elevage = if_else(sum(effectif, na.rm = TRUE) > 0, 1L, 0L), .groups = "drop")
+
+pluriactif <- producteur_mil %>%
+  left_join(elevage, by = c("grappe", "menage")) %>%
   mutate(
-    marge = prix_marche_moy - prix_prod_moy,
-    marge_pct = round(marge / prix_prod_moy * 100, 1)
+    a_elevage = replace_na(a_elevage, 0L),
+    pluriactif = if_else(producteur == 1 & a_elevage == 1, 1L, 0L)
   ) %>%
-  filter(!is.na(lat) & !is.na(lon))
+  select(grappe, menage, pluriactif, a_elevage)
 
-cat("Nombre de grappes avec marge calculée :", sum(!is.na(prix_par_grappe$marge)), 
-    "sur", nrow(prix_par_grappe), "\n")
+# ---- 7. Variables communautaires (instruments et interactions) ----
+irrigation <- qc_s3 %>%
+  mutate(irrigation = if_else(as.numeric(s03q17) == 1, 1L, 0L)) %>%
+  select(grappe, irrigation)
 
-# Sauvegarde pour cartographie
-write.csv(prix_par_grappe, "figures/prix_par_grappe.csv", row.names = FALSE)
-saveRDS(prix_par_grappe, "figures/prix_par_grappe.rds")
-cat("\n✔ Base prix par grappe sauvegardée (jointure marché par région).\n")
+cooperative <- qc_s3 %>%
+  mutate(coop_existe = if_else(as.numeric(s03q03) == 1, 1L, 0L)) %>%
+  select(grappe, coop_existe)
 
-# ---- 9. Marges commerciales par région (toutes cultures) ----
-marge_region <- prix_par_grappe %>%
-  group_by(region) %>%
-  summarise(
-    marge_moy = mean(marge, na.rm = TRUE),
-    .groups = "drop"
-  ) %>%
-  arrange(desc(marge_moy))
-
-cat("\n--- Marge commerciale moyenne par région (FCFA/kg) ---\n")
-print(marge_region)
-
-# ---- 10. Régression du prix producteur sur distance au marché et coopératives ----
-# Distance au marché (QC-S2)
 dist_marche <- qc_s2 %>%
-  filter(as.numeric(s02q00) %in% c(14, 15)) %>%  # 14=Marché permanent, 15=Marché périodique
+  filter(as.numeric(s02q00) %in% c(14, 15)) %>%
   group_by(grappe) %>%
   summarise(temps_marche = min(as.numeric(s02q03), na.rm = TRUE), .groups = "drop")
 
-# Existence de coopérative (QC-S3)
-coop <- qc_s3 %>%
-  mutate(coop_dummy = if_else(as.numeric(s03q03) == 1, 1L, 0L)) %>%
-  select(grappe, coop_dummy)
+# ---- 8. Contrôles (welfare) ----
+# CORRECTION : fonction unique de conversion de hgender, appliquée de façon
+# identique partout (au lieu d'un traitement différent entre OLS et IV).
+to_numeric_safe <- function(x) as.numeric(as.character(x))
 
-# Base de régression
-reg_data <- b16_clean %>%
+controles <- welfare %>%
+  mutate(
+    milieu_rural = if_else(as.numeric(milieu) == 2, 1L, 0L),
+    educ_primaire = if_else(as.numeric(heduc) >= 3, 1L, 0L),
+    log_pcexp = log(pcexp + 1),
+    hgender = to_numeric_safe(hgender)
+  ) %>%
+  select(grappe, menage, hhweight, region, hhsize, hage, hgender,
+         milieu_rural, educ_primaire, log_pcexp)
+
+# ---- 9. Base de régression complète (avec filtrage Mil) ----
+base_reg <- fies %>%
+  left_join(hdds, by = c("grappe", "menage")) %>%
+  left_join(revenu_vente_mil, by = c("grappe", "menage")) %>%
+  left_join(producteur_mil, by = c("grappe", "menage")) %>%
+  left_join(pluriactif, by = c("grappe", "menage")) %>%
+  left_join(irrigation, by = "grappe") %>%
+  left_join(cooperative, by = "grappe") %>%
   left_join(dist_marche, by = "grappe") %>%
-  left_join(coop, by = "grappe") %>%
-  filter(!is.na(temps_marche) & !is.na(prix_prod_kg) & prix_prod_kg > 0)
+  left_join(controles, by = c("grappe", "menage")) %>%
+  mutate(
+    producteur = replace_na(producteur, 0L),
+    a_vendu = replace_na(a_vendu, 0L),
+    revenu_agri = replace_na(revenu_agri, 0),
+    log_revenu = log(revenu_agri + 1),
+    pluriactif = replace_na(pluriactif, 0L),
+    a_elevage = replace_na(a_elevage, 0L),
+    log_temps_marche = log(temps_marche + 1)
+  ) %>%
+  filter(!is.na(score_fies) & !is.na(hhweight))
 
-cat("\nNombre d'observations pour la régression :", nrow(reg_data), "\n")
-# ---- Distance au marché (QC-S2) — CORRIGÉ pour éviter les Inf ----
-dist_marche <- qc_s2 %>%
-  filter(as.numeric(s02q00) %in% c(14, 15)) %>%  # 14=Marché permanent, 15=Marché périodique
-  group_by(grappe) %>%
+cat("Base de régression (filière Mil) :", nrow(base_reg), "ménages.\n")
+
+# ---- 10. GRAPHIQUE 1 : Distribution du score FIES selon statut producteur de Mil ----
+dir.create("figures", showWarnings = FALSE)
+
+p_fies <- base_reg %>%
+  mutate(statut = if_else(producteur == 1, "Producteur de Mil", "Non producteur de Mil")) %>%
+  ggplot(aes(x = score_fies, fill = statut, weight = hhweight)) +
+  geom_histogram(binwidth = 1, position = "dodge", alpha = 0.8) +
+  scale_x_continuous(breaks = 0:8) +
+  scale_fill_manual(values = c("Producteur de Mil" = "#2E86AB", "Non producteur de Mil" = "#E76F51")) +
+  labs(
+    title = "Distribution du score FIES selon le statut producteur de Mil",
+    x = "Score FIES", y = "Nombre de ménages (pondéré)",
+    fill = NULL
+  ) +
+  theme_minimal() +
+  theme(legend.position = "top")
+print(p_fies)
+ggsave("figures/fies_distribution.png", p_fies, width = 10, height = 6, dpi = 300)
+
+# ---- 11. MODÈLE 1 : OLS ----
+ols_data <- base_reg %>%
+  filter(!is.na(producteur) & !is.na(log_revenu) & !is.na(a_vendu) &
+           !is.na(hhsize) & !is.na(milieu_rural) & !is.na(educ_primaire) &
+           !is.na(log_pcexp) & !is.na(region)) %>%
+  mutate(across(where(is.numeric), ~ if_else(is.infinite(.), NA_real_, .))) %>%
+  na.omit()
+
+if (nrow(ols_data) > 0) {
+  modele_ols <- lm(score_fies ~ producteur + log_revenu + a_vendu +
+                     hhsize + hage + hgender + milieu_rural + educ_primaire +
+                     log_pcexp + as.factor(region),
+                   data = ols_data, weights = hhweight)
+  cat("\n=== MODÈLE OLS ===\n")
+  print(summary(modele_ols))
+  saveRDS(modele_ols, "figures/model_ols.rds")
+} else {
+  warning("Aucune donnée valide pour le modèle OLS.")
+  modele_ols <- NULL
+}
+
+# ---- 12. MODÈLE 2 : IV/2SLS (correction endogénéité) ----
+# CORRECTION : hage et hgender ajoutés dans la 2e étape pour cohérence
+# stricte avec la spécification OLS (mêmes contrôles dans les deux modèles).
+iv_vars <- c("producteur", "irrigation", "log_temps_marche", "hhsize", "hage",
+             "hgender", "milieu_rural", "educ_primaire", "log_pcexp", "region",
+             "hhweight", "score_fies", "log_revenu", "a_vendu")
+
+base_iv <- base_reg %>%
+  select(all_of(iv_vars)) %>%
+  mutate(across(where(is.numeric), ~ if_else(is.infinite(.), NA_real_, .))) %>%
+  mutate(region = as.factor(region)) %>%
+  na.omit()
+
+cat("Nombre d'observations pour IV après nettoyage :", nrow(base_iv), "\n")
+
+# Diagnostics IV sauvegardés (au lieu d'être seulement affichés en console)
+iv_diag <- character()
+
+if (nrow(base_iv) > 0) {
+  first_stage <- lm(producteur ~ irrigation + log_temps_marche +
+                      hhsize + hage + hgender + milieu_rural + educ_primaire +
+                      log_pcexp + region,
+                    data = base_iv, weights = hhweight)
+  fstat <- summary(first_stage)$fstatistic[1]
+  r2_fs <- summary(first_stage)$r.squared
+  cat("\n--- Première étape IV ---\n")
+  cat("F-stat =", fstat, "\n")
+  cat("R² =", round(r2_fs, 3), "\n")
+  if (fstat < 10) {
+    cat("ATTENTION : F-stat < 10, instrument potentiellement faible.\n")
+  }
+  
+  iv_diag <- c(
+    "--- Diagnostic de la première étape IV ---",
+    paste("F-stat (force des instruments) :", round(fstat, 2)),
+    paste("R² de la première étape :", round(r2_fs, 3)),
+    if (fstat < 10) "ATTENTION : F-stat < 10 -> instrument potentiellement faible (règle de Stock-Yogo)." else "Instrument jugé suffisamment fort (F-stat >= 10).",
+    "",
+    "Note sur la restriction d'exclusion : irrigation et distance au marché",
+    "sont supposées affecter score_fies uniquement via la décision de produire",
+    "du Mil (producteur), et non directement. Cette hypothèse n'est pas",
+    "testable statistiquement et doit être justifiée qualitativement dans le rapport."
+  )
+  
+  base_iv$producteur_hat <- fitted(first_stage)
+  
+  modele_iv <- lm(score_fies ~ producteur_hat + log_revenu + a_vendu +
+                    hhsize + hage + hgender + milieu_rural + educ_primaire +
+                    log_pcexp + region,
+                  data = base_iv, weights = hhweight)
+  cat("\n=== MODÈLE IV/2SLS ===\n")
+  print(summary(modele_iv))
+  saveRDS(modele_iv, "figures/model_iv.rds")
+} else {
+  message("Pas assez de données pour le modèle IV")
+  modele_iv <- NULL
+}
+
+# ---- 13. MODÈLE 3 : Interactions (pluriactivité × irrigation / coopérative) ----
+# CORRECTION : pluriactif = producteur * a_elevage n'est PAS parfaitement
+# colinéaire avec producteur (ce n'est vrai que si a_elevage était constant),
+# mais les deux variables sont fortement corrélées puisque pluriactif=1
+# implique producteur=1. On garde les deux termes (l'effet marginal de
+# producteur=1 & a_elevage=0 reste identifié), mais on ajoute un diagnostic
+# explicite de colinéarité (alias + VIF) au lieu de laisser R droper une
+# variable silencieusement.
+modele_pluri_irrig <- lm(score_fies ~ pluriactif * irrigation +
+                           producteur + log_revenu + a_vendu +
+                           hhsize + hage + hgender + milieu_rural + educ_primaire +
+                           log_pcexp + as.factor(region),
+                         data = base_reg, weights = hhweight)
+cat("\n=== MODÈLE Pluriactivité × Irrigation ===\n")
+print(summary(modele_pluri_irrig))
+
+alias_irrig <- stats::alias(modele_pluri_irrig)
+if (!is.null(alias_irrig$Complete)) {
+  cat("\nATTENTION - colinéarité parfaite détectée (modèle Irrigation) :\n")
+  print(alias_irrig$Complete)
+} else {
+  cat("\nAucune colinéarité parfaite détectée (modèle Irrigation).\n")
+}
+
+modele_pluri_coop <- lm(score_fies ~ pluriactif * coop_existe +
+                          producteur + log_revenu + a_vendu +
+                          hhsize + hage + hgender + milieu_rural + educ_primaire +
+                          log_pcexp + as.factor(region),
+                        data = base_reg, weights = hhweight)
+cat("\n=== MODÈLE Pluriactivité × Coopérative ===\n")
+print(summary(modele_pluri_coop))
+
+alias_coop <- stats::alias(modele_pluri_coop)
+if (!is.null(alias_coop$Complete)) {
+  cat("\nATTENTION - colinéarité parfaite détectée (modèle Coopérative) :\n")
+  print(alias_coop$Complete)
+} else {
+  cat("\nAucune colinéarité parfaite détectée (modèle Coopérative).\n")
+}
+
+# ---- 13bis. GRAPHIQUE 3 : Score FIES selon pluriactivité (fig-pluri) ----
+p_pluri <- base_reg %>%
+  mutate(statut_pluri = case_when(
+    pluriactif == 1 ~ "Pluriactif (Mil + élevage)",
+    producteur == 1 ~ "Producteur de Mil seul",
+    TRUE ~ "Non producteur de Mil"
+  )) %>%
+  group_by(statut_pluri) %>%
   summarise(
-    temps_marche = suppressWarnings(min(as.numeric(s02q03), na.rm = TRUE)),
+    score_moyen = weighted.mean(score_fies, hhweight, na.rm = TRUE),
+    n = n(),
     .groups = "drop"
   ) %>%
-  mutate(temps_marche = if_else(is.infinite(temps_marche), NA_real_, temps_marche))
+  ggplot(aes(x = reorder(statut_pluri, score_moyen), y = score_moyen, fill = statut_pluri)) +
+  geom_col(width = 0.6) +
+  coord_flip() +
+  labs(
+    title = "Score FIES moyen selon le statut de pluriactivité",
+    x = NULL, y = "Score FIES moyen (pondéré)", fill = NULL
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none")
+print(p_pluri)
+ggsave("figures/pluriactivite_fies.png", p_pluri, width = 9, height = 5, dpi = 300)
 
-cat("Nombre de grappes avec temps_marche valide :", sum(!is.na(dist_marche$temps_marche)), 
-    "sur", nrow(dist_marche), "\n")
-reg_data <- b16_clean %>%
-  left_join(dist_marche, by = "grappe") %>%
-  left_join(coop, by = "grappe") %>%
-  filter(
-    !is.na(temps_marche) & is.finite(temps_marche) &
-    !is.na(prix_prod_kg) & prix_prod_kg > 0 & is.finite(prix_prod_kg) &
-    !is.na(qte_vendue_kg) & qte_vendue_kg > 0 & is.finite(qte_vendue_kg) &
-    !is.na(coop_dummy) &
-    !is.na(hhweight) & hhweight > 0
-  )
+# ---- 14. MODÈLE 4 : HDDS (robustesse) ----
+modele_hdds <- lm(score_hdds ~ producteur + log_revenu + a_vendu +
+                    hhsize + hage + hgender + milieu_rural + educ_primaire +
+                    log_pcexp + as.factor(region),
+                  data = base_reg %>% filter(!is.na(score_hdds)),
+                  weights = hhweight)
+cat("\n=== MODÈLE HDDS ===\n")
+print(summary(modele_hdds))
 
-cat("\nNombre d'observations pour la régression :", nrow(reg_data), "\n")
-summary(reg_data$temps_marche)  # vérifier qu'il n'y a plus d'Inf
-# Modèle OLS pondéré
-model_prix <- lm(log(prix_prod_kg) ~ log(temps_marche + 1) + coop_dummy + 
-                   as_factor(s16dq08) + log(qte_vendue_kg),
-                 data = reg_data, weights = hhweight)
+# ---- 15. GRAPHIQUE 2 : Comparaison des coefficients ----
+if (!is.null(modele_ols) && !is.null(modele_iv) && !is.null(modele_hdds)) {
+  vars_interet <- c("producteur", "log_revenu", "a_vendu",
+                    "hhsize", "milieu_rural", "educ_primaire")
+  
+  coef_ols <- tidy(modele_ols, conf.int = TRUE) %>%
+    filter(term %in% vars_interet) %>% mutate(modele = "OLS")
+  
+  coef_iv <- tidy(modele_iv, conf.int = TRUE) %>%
+    mutate(term = if_else(term == "producteur_hat", "producteur", term)) %>%
+    filter(term %in% vars_interet) %>% mutate(modele = "IV")
+  
+  coef_hdds <- tidy(modele_hdds, conf.int = TRUE) %>%
+    filter(term %in% vars_interet) %>% mutate(modele = "HDDS")
+  
+  coef_comp <- bind_rows(coef_ols, coef_iv, coef_hdds) %>%
+    mutate(
+      term = dplyr::recode(term,
+                           producteur = "Producteur de Mil",
+                           log_revenu = "Log(revenu agricole Mil)",
+                           a_vendu = "A vendu du Mil",
+                           hhsize = "Taille ménage",
+                           milieu_rural = "Rural",
+                           educ_primaire = "Éduqué (≥primaire)")
+    )
+  
+  p_coef <- ggplot(coef_comp, aes(x = term, y = estimate, color = modele, shape = (p.value < 0.05))) +
+    geom_point(position = position_dodge(width = 0.5)) +
+    geom_errorbar(aes(ymin = conf.low, ymax = conf.high), width = 0.2,
+                  position = position_dodge(width = 0.5)) +
+    geom_hline(yintercept = 0, linetype = "dashed") +
+    coord_flip() +
+    labs(title = "Comparaison des modèles (filière Mil)",
+         x = NULL, y = "Coefficient", color = "Modèle", shape = "p<0.05") +
+    theme_minimal()
+  print(p_coef)
+  ggsave("figures/comparaison_modeles.png", p_coef, width = 10, height = 6, dpi = 300)
+}
 
-
-cat("\n--- Résultats de la régression du prix producteur ---\n")
-print(summary(model_prix))
-
-# Sauvegarde des résultats
-sink("figures/regression_prix_producteur.txt")
-cat("MODÈLE : log(prix_prod_kg) ~ log(temps_marche+1) + coop_dummy + canal_vente + log(qte_vendue_kg)\n")
-print(summary(model_prix))
+# ---- 16. SAUVEGARDE DES RÉSULTATS ----
+sink("figures/resultats_module5.txt")
+cat("=== MODULE 5 : RÉSULTATS (Filière Mil) ===\n\n")
+cat("=== MODÈLE OLS ===\n")
+if (!is.null(modele_ols)) print(summary(modele_ols)) else cat("Non estimé\n")
+cat("\n=== MODÈLE IV/2SLS ===\n")
+if (!is.null(modele_iv)) print(summary(modele_iv)) else cat("Non estimé\n")
+cat("\n")
+if (length(iv_diag) > 0) cat(paste(iv_diag, collapse = "\n"), "\n")
+cat("\n=== MODÈLE Pluriactivité × Irrigation ===\n")
+print(summary(modele_pluri_irrig))
+cat("\n=== MODÈLE Pluriactivité × Coopérative ===\n")
+print(summary(modele_pluri_coop))
+cat("\n=== MODÈLE HDDS ===\n")
+if (!is.null(modele_hdds)) print(summary(modele_hdds)) else cat("Non estimé\n")
 sink()
 
-cat("\n✔ Module 4 terminé. Résultats sauvegardés dans figures/\n")
+cat("\n✔ Module 5 (filière Mil) terminé. Résultats sauvegardés dans 'figures/'.\n")
