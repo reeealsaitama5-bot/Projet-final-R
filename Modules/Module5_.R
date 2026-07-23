@@ -20,7 +20,6 @@ library(scales)
 # n'est donc requis pour cette partie.
 
 # 2. CHARGEMENT DES BASES
-# -------------------------------------------------------------------------
 s08 <- read_dta(here("data", "s08a_me_ner2021.dta"))
 b4  <- read_dta(here("data", "s07b_me_ner2021.dta"))
 b16 <- read_dta(here("data", "s16d_me_ner2021.dta"))
@@ -34,14 +33,8 @@ welfare <- read_dta(here("data", "ehcvm_welfare_ner2021.dta"))
 CODE_MIL_CONSO <- 7   # dans S07B
 CODE_MIL_PROD  <- 1   # dans S16C et S16D
 
-# NOTE : la consigne initiale demandait un "taux_vente" (quantité vendue /
-# quantité produite). Faute de variable de quantité produite fiable dans
-# S16D, on utilise ici un indicateur binaire `a_vendu` (a vendu du Mil : oui/non).
-# A documenter explicitement dans le rapport.
 
-cat("\n=== MODULE 5 : IMPACT DE LA FILIÈRE DU MIL SUR LA SÉCURITÉ ALIMENTAIRE ===\n")
-
-# ---- 3. Construction du score FIES (Section S08) ----
+# 3. Construction du score FIES (Section S08) 
 fies <- s08 %>%
   mutate(across(c(s08aq01, s08aq02, s08aq03, s08aq04,
                   s08aq05, s08aq06, s08aq07, s08aq08),
@@ -73,14 +66,7 @@ fies <- s08 %>%
 cat("Score FIES : moyenne =", mean(fies$score_fies, na.rm = TRUE),
     ", médiane =", median(fies$score_fies, na.rm = TRUE), "\n")
 
-# ---- 4. Construction du score HDDS (Section S07B) ----
-# CORRECTION : l'ancienne version utilisait
-#   groupes_alimentaires <- c("Céréales" = 1:20, "Viandes" = 27:39, ...)
-# Or c() sur plusieurs vecteurs nommés APLATIT le tout et génère des noms
-# du type "Céréales1", "Céréales2", ... au lieu de répéter "Céréales".
-# stack() sur un vecteur atomique (pas une liste) échoue en plus avec
-# une erreur "'x' must be a list or data frame".
-# -> on reconstruit group_map explicitement avec rep() pour chaque groupe.
+#  4. Construction du score HDDS (Section S07B) ----
 groupe_map <- data.frame(
   code_produit = c(1:20, 27:39, 40:49, 52:60, 61:69, 71:87, 88:111, 112:120, 134:138, 155:166),
   groupe = c(
@@ -109,7 +95,7 @@ hdds <- b4 %>%
 cat("Score HDDS : moyenne =", mean(hdds$score_hdds, na.rm = TRUE),
     ", médiane =", median(hdds$score_hdds, na.rm = TRUE), "\n")
 
-# ---- 5. Variables de participation à la filière du Mil ----
+#  5. Variables de participation à la filière du Mil 
 producteur_mil <- b6 %>%
   filter(!is.na(vague) & as.numeric(s16cq04) == CODE_MIL_PROD) %>%
   distinct(grappe, menage) %>%
@@ -124,7 +110,7 @@ revenu_vente_mil <- b16 %>%
     .groups = "drop"
   )
 
-# ---- 6. Élevage et pluriactivité (S17) ----
+# 6. Élevage et pluriactivité (S17) 
 elevage <- s17 %>%
   mutate(effectif = as.numeric(s17q03)) %>%
   group_by(grappe, menage) %>%
