@@ -123,10 +123,10 @@ install.packages(c(
 ```
 1. Ouvrir FINALE.Rproj dans RStudio
 2. Exécuter Modules/00_load_data.R   → charge toutes les bases
-3. Exécuter Module1.R                → justification du choix du Mil
+3. Exécuter Modules/Module1.R                → justification du choix du Mil
 4. Exécuter Modules/Module2.R        → profilage des ménages
 5. Exécuter Modules/Module3.R        → rendements agricoles
-6. Exécuter Module4.R                → commercialisation et prix
+6. Exécuter Modules/Module4.R                → commercialisation et prix
 7. Exécuter Modules/Module5.R        → sécurité alimentaire
 8. Compiler Rapport/Rapport-final.Rmd → générer le PDF
 ```
@@ -143,10 +143,10 @@ rmarkdown::render("Rapport/Rapport-final.Rmd", output_format = "pdf_document")
 
 | Module | Script | Objectif principal |
 |--------|--------|--------------------|
-| **1** | `Module1.R` | Justifier empiriquement le choix du Mil comme produit stratégique |
+| **1** | `Modules/Module1.R` | Justifier empiriquement le choix du Mil comme produit stratégique |
 | **2** | `Modules/Module2.R` | Profiler les ménages selon leur statut producteur/consommateur |
 | **3** | `Modules/Module3.R` | Calculer les rendements du Mil et identifier leurs déterminants |
-| **4** | `Module4.R` | Analyser la commercialisation, les prix et les marges commerciales |
+| **4** | `Modules/Module4.R` | Analyser la commercialisation, les prix et les marges commerciales |
 | **5** | `Modules/Module5.R` | Tester l'impact de la filière sur la sécurité alimentaire (IV/2SLS) |
 
 ---
